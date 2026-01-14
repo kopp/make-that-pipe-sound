@@ -21,17 +21,22 @@ function parseSongString(song: string | undefined): Note[] {
 
       if (token.includes("/")) {
         const parts = token.split("/");
-        pitch = parts[0];
+        pitch = parts[0].trim();
         const denom = parseFloat(parts[1]) || 1;
         duration = 1 / denom;
       } else if (token.includes("*")) {
         const parts = token.split("*");
-        pitch = parts[0];
+        pitch = parts[0].trim();
         const mult = parseFloat(parts[1]) || 1;
         duration = mult;
       } else {
-        pitch = token;
+        pitch = token.trim();
         duration = 1;
+      }
+
+      // If no octave digit provided, default to octave 4 (e.g., C -> C4)
+      if (!/\d$/.test(pitch)) {
+        pitch = `${pitch}4`;
       }
 
       return { pitch, duration } as Note;
