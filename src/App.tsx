@@ -47,6 +47,7 @@ export default function App() {
   const [songKey, setSongKey] = useState<string>(Object.keys(SONG_DATA)[0]);
   const [mode, setMode] = useState<Mode>("dynamic");
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [headerVisible, setHeaderVisible] = useState(true);
 
   // SONG_DATA now maps song names -> mini-language strings
   const notes = useMemo(() => {
@@ -89,8 +90,16 @@ export default function App() {
 
   return (
     <div style={styles.appContainer}>
+      <button
+        onClick={() => setHeaderVisible((v) => !v)}
+        aria-label={headerVisible ? "Hide header" : "Show header"}
+        style={styles.burgerButton}
+      >
+        {headerVisible ? "✖" : "☰"}
+      </button>
       {/* --- Header Controls --- */}
-      <header style={styles.header}>
+      {headerVisible && (
+        <header style={styles.header}>
         <div style={styles.controlGroup}>
           <label>Song:</label>
           <select
@@ -141,7 +150,8 @@ export default function App() {
             Forward
           </button>
         </div>
-      </header>
+        </header>
+      )}
 
       {/* --- Play Area --- */}
       <main
@@ -236,6 +246,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: "#1a1a1a",
     color: "white",
     overflow: "hidden",
+    position: "relative",
   },
   header: {
     padding: "1rem",
@@ -301,5 +312,18 @@ const styles: Record<string, React.CSSProperties> = {
     transition: "all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
     boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
     userSelect: "none",
+  },
+  burgerButton: {
+    position: "absolute",
+    top: "10px",
+    right: "10px",
+    zIndex: 20,
+    padding: "8px 10px",
+    borderRadius: "6px",
+    background: "#333",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "1.1rem",
   },
 };
