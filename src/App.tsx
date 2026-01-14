@@ -83,6 +83,7 @@ export default function App() {
 
   const [songKey, setSongKey] = useState<string>(Object.keys(SONG_DATA)[0]);
   const [mode, setMode] = useState<Mode>("static");
+  const [upcomingCount, setUpcomingCount] = useState<number>(UPCOMING_COUNT);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [headerVisible, setHeaderVisible] = useState(true);
 
@@ -162,6 +163,24 @@ export default function App() {
               <option value="static">Static (Scroll)</option>
               <option value="dynamic">Dynamic (Play)</option>
             </select>
+            {mode === "dynamic" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label>Upcoming:</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={upcomingCount}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setUpcomingCount(
+                      Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0
+                    );
+                  }}
+                  style={styles.numberInput}
+                />
+              </div>
+            )}
           </div>
 
           <div style={styles.controlGroup}>
@@ -298,7 +317,7 @@ export default function App() {
             {/* Upcoming Notes */}
             <div style={styles.previewStrip}>
               {notes
-                .slice(currentIndex + 1, currentIndex + 1 + UPCOMING_COUNT)
+                .slice(currentIndex + 1, currentIndex + 1 + upcomingCount)
                 .map((note, i) => (
                   <NoteCard
                     key={i}
@@ -474,6 +493,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "6px",
     border: "1px solid #444",
     background: "#111",
+    color: "white",
+  },
+  numberInput: {
+    width: "4rem",
+    padding: "6px",
+    borderRadius: "4px",
+    border: "none",
+    background: "#444",
     color: "white",
   },
   modalOverlay: {
