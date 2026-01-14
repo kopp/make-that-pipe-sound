@@ -45,7 +45,7 @@ function parseSongString(song: string | undefined): Note[] {
 
 export default function App() {
   const [songKey, setSongKey] = useState<string>(Object.keys(SONG_DATA)[0]);
-  const [mode, setMode] = useState<Mode>("dynamic");
+  const [mode, setMode] = useState<Mode>("static");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [headerVisible, setHeaderVisible] = useState(true);
 
