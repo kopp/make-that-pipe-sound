@@ -44,6 +44,10 @@ function parseSongString(song: string | undefined): Note[] {
     });
 }
 
+function makeNoteWithDuration(note: Note, duration: number = 1): Note {
+  return { pitch: note.pitch, duration: duration };
+}
+
 export default function App() {
   // localStorage key for overrides
   const LOCAL_STORAGE_KEY = "mtp-data-override";
@@ -84,6 +88,8 @@ export default function App() {
   const [songKey, setSongKey] = useState<string>(Object.keys(SONG_DATA)[0]);
   const [mode, setMode] = useState<Mode>("static");
   const [upcomingCount, setUpcomingCount] = useState<number>(UPCOMING_COUNT);
+  // following notes in the dynamic mode ignore the duration and are all same size
+  const [smallFollowing, setSmallFollowing] = useState<boolean>(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [headerVisible, setHeaderVisible] = useState(true);
 
@@ -179,6 +185,16 @@ export default function App() {
                   }}
                   style={styles.numberInput}
                 />
+                <label
+                  style={{ display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={smallFollowing}
+                    onChange={(e) => setSmallFollowing(e.target.checked)}
+                  />
+                  <span>Small following</span>
+                </label>
               </div>
             )}
           </div>
@@ -321,8 +337,9 @@ export default function App() {
                 .map((note, i) => (
                   <NoteCard
                     key={i}
-                    note={note}
+                    note={smallFollowing ? makeNoteWithDuration(note, 1) : note}
                     isActive={false}
+                    isLarge={false}
                     colorMap={COLOR_MAP}
                   />
                 ))}
@@ -361,7 +378,7 @@ function NoteCard({
         ...styles.note,
         backgroundColor: color,
         width: `${note.duration * (isLarge ? BASE_UNIT * 1.5 : BASE_UNIT)}px`,
-        height: isLarge ? "150px" : "80px",
+        height: isLarge ? "300px" : "80px",
         border: isActive
           ? "5px solid #00d4ff"
           : "2px solid rgba(255,255,255,0.1)",
