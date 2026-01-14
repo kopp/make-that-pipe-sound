@@ -438,9 +438,12 @@ function NoteCard({
         backgroundColor: color,
         width: `${note.duration * (isLarge ? BASE_UNIT * 1.5 : BASE_UNIT)}px`,
         height: isLarge ? "300px" : "80px",
+        // Size of the borders needs to be the same to ensure that the NoteCard
+        // takes the same space in both active/inactive states, otherwise the
+        // layout shifts while playing.
         border: isActive
-          ? "5px solid #00d4ff"
-          : "2px solid rgba(255,255,255,0.1)",
+          ? "15px solid #00d4ff"
+          : "15px solid rgba(255,255,255,0.1)",
         color: isDarkColor ? "white" : "black",
         transform: isActive ? "scale(1.05)" : "scale(1)",
         zIndex: isActive ? 2 : 1,
