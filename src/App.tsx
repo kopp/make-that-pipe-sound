@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import COLOR_MAP from "./data/mapping.json";
-import SONG_DATA from "./data/songs.json";
+import DATA from "./data/data.json";
+
+const COLOR_MAP = (DATA as any).color_mapping as Record<string, string>;
+const SONG_DATA = (DATA as any).songs as Record<string, string>;
 
 type Note = { pitch: string; duration: number };
 type Mode = "static" | "dynamic";
