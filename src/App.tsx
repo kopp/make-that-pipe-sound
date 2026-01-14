@@ -5,9 +5,10 @@ type Note = { pitch: string; duration: number };
 type Mode = "static" | "dynamic";
 
 const BASE_UNIT = 80; // Width of a note with duration 1
-const UPCOMING_COUNT = 3; // Parameter: how many notes to preview in dynamic mode
+const INITIAL_UPCOMING_COUNT = 5; // Parameter: how many notes to preview in dynamic mode
 const KEYS_NEXT = ["Space", "Enter", "Right", "PageDown"];
 const KEYS_PREVIOUS = ["Left", "PageUp"];
+const TRANSITION_MS = 100;
 
 // Parse the mini-language string into Note[]
 function parseSongString(song: string | undefined): Note[] {
@@ -87,10 +88,13 @@ export default function App() {
 
   const [songKey, setSongKey] = useState<string>(Object.keys(SONG_DATA)[0]);
   const [mode, setMode] = useState<Mode>("static");
-  const [upcomingCount, setUpcomingCount] = useState<number>(UPCOMING_COUNT);
+  const [upcomingCount, setUpcomingCount] = useState<number>(
+    INITIAL_UPCOMING_COUNT
+  );
   // following notes in the dynamic mode ignore the duration and are all same size
   const [smallFollowing, setSmallFollowing] = useState<boolean>(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
 
   // SONG_DATA now maps song names -> mini-language strings
@@ -99,18 +103,41 @@ export default function App() {
     return parseSongString(raw);
   }, [songKey]);
 
-  // Logic to advance to next note
+  // Logic to advance to next note.
+  // If in `dynamic` mode, use a brief blank transition; in `static` mode advance immediately.
   const nextNote = useCallback(() => {
-    setCurrentIndex((prev) => (prev < notes.length - 1 ? prev + 1 : 0));
-  }, [notes.length]);
+    if (mode !== "dynamic") {
+      setCurrentIndex((prev) => (prev < notes.length - 1 ? prev + 1 : 0));
+      return;
+    }
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev < notes.length - 1 ? prev + 1 : 0));
+      setIsTransitioning(false);
+    }, TRANSITION_MS);
+  }, [notes.length, isTransitioning, mode]);
 
-  // Go to previous note (wrap to end if at start)
+  // Go to previous note (wrap to end if at start).
+  // If in `dynamic` mode, use a brief blank transition; otherwise immediate.
   const prevNote = useCallback(() => {
-    setCurrentIndex((prev) => {
-      if (notes.length === 0) return 0;
-      return prev > 0 ? prev - 1 : notes.length - 1;
-    });
-  }, [notes.length]);
+    if (mode !== "dynamic") {
+      setCurrentIndex((prev) => {
+        if (notes.length === 0) return 0;
+        return prev > 0 ? prev - 1 : notes.length - 1;
+      });
+      return;
+    }
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentIndex((prev) => {
+        if (notes.length === 0) return 0;
+        return prev > 0 ? prev - 1 : notes.length - 1;
+      });
+      setIsTransitioning(false);
+    }, TRANSITION_MS);
+  }, [notes.length, isTransitioning, mode]);
 
   // Reset to first note
   const resetNotes = useCallback(() => {
@@ -131,6 +158,11 @@ export default function App() {
   useEffect(() => {
     setCurrentIndex(0);
   }, [songKey]);
+
+  // When switching out of dynamic mode, cancel any pending transition
+  useEffect(() => {
+    if (mode !== "dynamic" && isTransitioning) setIsTransitioning(false);
+  }, [mode, isTransitioning]);
 
   return (
     <div style={styles.appContainer}>
@@ -308,7 +340,9 @@ export default function App() {
         style={styles.main}
         onClick={mode === "dynamic" ? nextNote : undefined}
       >
-        {mode === "static" ? (
+        {isTransitioning ? (
+          <div style={styles.transitionBlank} />
+        ) : mode === "static" ? (
           <div style={styles.staticGrid}>
             {notes.map((note, i) => (
               <NoteCard
@@ -540,5 +574,12 @@ const styles: Record<string, React.CSSProperties> = {
   error: {
     color: "#ff6666",
     marginTop: "8px",
+  },
+  transitionBlank: {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 };
