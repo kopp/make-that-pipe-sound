@@ -59,14 +59,28 @@ export default function App() {
     setCurrentIndex((prev) => (prev < notes.length - 1 ? prev + 1 : 0));
   }, [notes.length]);
 
+  // Go to previous note (wrap to end if at start)
+  const prevNote = useCallback(() => {
+    setCurrentIndex((prev) => {
+      if (notes.length === 0) return 0;
+      return prev > 0 ? prev - 1 : notes.length - 1;
+    });
+  }, [notes.length]);
+
+  // Reset to first note
+  const resetNotes = useCallback(() => {
+    setCurrentIndex(0);
+  }, []);
+
   // Handle keyboard (Space or Enter to advance)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" || e.code === "Enter") nextNote();
+      else if (e.code === "ArrowLeft") prevNote();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nextNote]);
+  }, [nextNote, prevNote]);
 
   // Reset index when song changes
   useEffect(() => {
@@ -102,6 +116,30 @@ export default function App() {
             <option value="static">Static (Scroll)</option>
             <option value="dynamic">Dynamic (Play)</option>
           </select>
+        </div>
+
+        <div style={styles.controlGroup}>
+          <button
+            style={styles.button}
+            onClick={resetNotes}
+            aria-label="Reset to first note"
+          >
+            Reset
+          </button>
+          <button
+            style={styles.button}
+            onClick={prevNote}
+            aria-label="Previous note"
+          >
+            Back
+          </button>
+          <button
+            style={styles.button}
+            onClick={nextNote}
+            aria-label="Next note"
+          >
+            Forward
+          </button>
         </div>
       </header>
 
