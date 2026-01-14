@@ -1,139 +1,196 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import COLOR_MAP from './data/mapping.json';
+import SONG_DATA from './data/songs.json';
 
-// --- Types ---
-type Note = {
-  pitch: string;
-  duration: number;
-};
+type Note = { pitch: string; duration: number };
+type Mode = 'static' | 'dynamic';
 
-type ColorMap = Record<string, string>;
+const BASE_UNIT = 80; // Width of a note with duration 1
+const UPCOMING_COUNT = 3; // Parameter: how many notes to preview in dynamic mode
 
-interface SongData {
-  [songName: string]: Note[];
-}
-
-// --- Mock Data (Usually loaded from JSON files) ---
-const COLOR_MAP: ColorMap = {
-  "C4": "yellow", "D4": "green", "E4": "blue", 
-  "F4": "white", "G4": "red", "A4": "black"
-};
-
-const SONG_DATA: SongData = {
-  "Twinkle": [
-    { pitch: "C4", duration: 1 }, { pitch: "C4", duration: 1 },
-    { pitch: "G4", duration: 1 }, { pitch: "G4", duration: 1 },
-    { pitch: "A4", duration: 1 }, { pitch: "A4", duration: 1 },
-    { pitch: "G4", duration: 2 },
-  ]
-};
-
-const UNIT_WIDTH = 60; // Base width for 1 unit of duration
-const UPCOMING_COUNT = 4; // Parameter for dynamic mode
-
-export default function MusicApp() {
-  const [mode, setMode] = useState<'static' | 'dynamic'>('static');
+export default function App() {
+  const [songKey, setSongKey] = useState<string>(Object.keys(SONG_DATA)[0]);
+  const [mode, setMode] = useState<Mode>('dynamic');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const notes = SONG_DATA["Twinkle"];
 
-  // Advance to next note
+  const notes = (SONG_DATA as Record<string, Note[]>)[songKey];
+
+  // Logic to advance to next note
   const nextNote = useCallback(() => {
     setCurrentIndex((prev) => (prev < notes.length - 1 ? prev + 1 : 0));
   }, [notes.length]);
 
-  // Handle Keyboard events
+  // Handle keyboard (Space or Enter to advance)
   useEffect(() => {
-    const handleKeyDown = () => nextNote();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.code === 'Enter') nextNote();
+    };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nextNote]);
 
-  return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', background: '#333', minHeight: '100vh', color: 'white' }}>
-      <h1>Music Color Player</h1>
-      
-      <div style={{ marginBottom: '20px' }}>
-        <button onClick={() => setMode('static')}>Static Mode</button>
-        <button onClick={() => setMode('dynamic')}>Dynamic Mode</button>
-        <button onClick={() => setCurrentIndex(0)}>Reset</button>
-      </div>
+  // Reset index when song changes
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [songKey]);
 
-      {mode === 'static' ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-          {notes.map((note, i) => (
-            <NoteRectangle 
-              key={i} 
-              note={note} 
-              isActive={i === currentIndex} 
-              onClick={() => setCurrentIndex(i)} 
-            />
-          ))}
+  return (
+    <div style={styles.appContainer}>
+      {/* --- Header Controls --- */}
+      <header style={styles.header}>
+        <div style={styles.controlGroup}>
+          <label>Song:</label>
+          <select value={songKey} onChange={(e) => setSongKey(e.target.value)} style={styles.select}>
+            {Object.keys(SONG_DATA).map(key => <option key={key} value={key}>{key}</option>)}
+          </select>
         </div>
-      ) : (
-        <div 
-          onClick={nextNote}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '20px', 
-            padding: '40px', 
-            background: '#222', 
-            cursor: 'pointer',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Current Note - Displayed Larger */}
-          <NoteRectangle 
-            note={notes[currentIndex]} 
-            isActive={true} 
-            isLarge={true} 
-          />
-          
-          {/* Upcoming Notes */}
-          {notes.slice(currentIndex + 1, currentIndex + 1 + UPCOMING_COUNT).map((note, i) => (
-            <NoteRectangle key={i} note={note} isActive={false} />
-          ))}
+
+        <div style={styles.controlGroup}>
+          <label>Mode:</label>
+          <select value={mode} onChange={(e) => setMode(e.target.value as Mode)} style={styles.select}>
+            <option value="static">Static (Scroll)</option>
+            <option value="dynamic">Dynamic (Play)</option>
+          </select>
         </div>
-      )}
-      
-      <p>Tip: Press any key or click in Dynamic Mode to play the next note.</p>
+      </header>
+
+      {/* --- Play Area --- */}
+      <main 
+        style={styles.main} 
+        onClick={mode === 'dynamic' ? nextNote : undefined}
+      >
+        {mode === 'static' ? (
+          <div style={styles.staticGrid}>
+            {notes.map((note, i) => (
+              <NoteCard 
+                key={i} 
+                note={note} 
+                isActive={i === currentIndex} 
+                onClick={() => setCurrentIndex(i)} 
+              />
+            ))}
+          </div>
+        ) : (
+          <div style={styles.dynamicWrapper}>
+            {/* Focus Note */}
+            <NoteCard note={notes[currentIndex]} isActive={true} isLarge={true} />
+            
+            {/* Upcoming Notes */}
+            <div style={styles.previewStrip}>
+              {notes.slice(currentIndex + 1, currentIndex + 1 + UPCOMING_COUNT).map((note, i) => (
+                <NoteCard key={i} note={note} isActive={false} />
+              ))}
+            </div>
+            <div style={styles.tapPrompt}>Tap screen or press Space to play</div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
 
-// --- Sub-component for the Note Rectangle ---
-function NoteRectangle({ 
-  note, 
-  isActive, 
-  isLarge = false, 
-  onClick 
-}: { 
-  note: Note; 
-  isActive: boolean; 
-  isLarge?: boolean;
-  onClick?: () => void;
+// --- Sub-component ---
+function NoteCard({ note, isActive, isLarge, onClick }: { 
+  note: Note; isActive: boolean; isLarge?: boolean; onClick?: () => void 
 }) {
-  const color = COLOR_MAP[note.pitch] || 'grey';
-  
+  const color = (COLOR_MAP as Record<string, string>)[note.pitch] || '#555';
+  const isDarkColor = color === 'black' || color === 'red' || color === 'blue';
+
   return (
     <div
       onClick={onClick}
       style={{
-        width: `${note.duration * (isLarge ? UNIT_WIDTH * 1.5 : UNIT_WIDTH)}px`,
-        height: isLarge ? '100px' : '60px',
+        ...styles.note,
         backgroundColor: color,
-        border: isActive ? '4px solid orange' : '2px solid transparent',
-        borderRadius: '8px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s ease',
-        color: color === 'white' || color === 'yellow' ? 'black' : 'white',
-        fontWeight: 'bold',
-        fontSize: isLarge ? '1.2rem' : '0.8rem',
-        flexShrink: 0
+        width: `${note.duration * (isLarge ? BASE_UNIT * 1.5 : BASE_UNIT)}px`,
+        height: isLarge ? '150px' : '80px',
+        border: isActive ? '5px solid #00d4ff' : '2px solid rgba(255,255,255,0.1)',
+        color: isDarkColor ? 'white' : 'black',
+        transform: isActive ? 'scale(1.05)' : 'scale(1)',
+        zIndex: isActive ? 2 : 1,
       }}
     >
-      {note.pitch}
+      <span style={{ fontSize: isLarge ? '1.5rem' : '1rem', fontWeight: 'bold' }}>
+        {note.pitch}
+      </span>
     </div>
   );
 }
+
+// --- Responsive Styles ---
+const styles: Record<string, React.CSSProperties> = {
+  appContainer: {
+    width: '100vw',
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#1a1a1a',
+    color: 'white',
+    overflow: 'hidden',
+  },
+  header: {
+    padding: '1rem',
+    display: 'flex',
+    gap: '20px',
+    background: '#2a2a2a',
+    borderBottom: '1px solid #444',
+    flexWrap: 'wrap',
+  },
+  controlGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  select: {
+    padding: '8px',
+    borderRadius: '4px',
+    border: 'none',
+    background: '#444',
+    color: 'white',
+    fontSize: '1rem',
+  },
+  main: {
+    flex: 1,
+    padding: '2rem',
+    overflowY: 'auto',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
+  },
+  staticGrid: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '15px',
+    justifyContent: 'center',
+    maxWidth: '1200px',
+  },
+  dynamicWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '30px',
+  },
+  previewStrip: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    opacity: 0.7,
+  },
+  tapPrompt: {
+    marginTop: '20px',
+    fontSize: '0.9rem',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+  },
+  note: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '12px',
+    transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+    userSelect: 'none',
+  }
+};
