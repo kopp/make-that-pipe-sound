@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import DATA from "./data/data.json";
 
-const COLOR_MAP = (DATA as any).color_mapping as Record<string, string>;
-const SONG_DATA = (DATA as any).songs as Record<string, string>;
-
 type Note = { pitch: string; duration: number };
 type Mode = "static" | "dynamic";
 
@@ -46,6 +43,42 @@ function parseSongString(song: string | undefined): Note[] {
 }
 
 export default function App() {
+  // localStorage key for overrides
+  const LOCAL_STORAGE_KEY = "mtp-data-override";
+
+  // load any override from localStorage (stringified JSON)
+  const [overrideRaw, setOverrideRaw] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(LOCAL_STORAGE_KEY);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // editor modal state
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorContent, setEditorContent] = useState("");
+  const [editorError, setEditorError] = useState<string | null>(null);
+
+  // current effective data (either override or bundled DATA)
+  const currentData = useMemo(() => {
+    if (!overrideRaw) return DATA as any;
+    try {
+      return JSON.parse(overrideRaw);
+    } catch (e) {
+      alert(
+        "The stored JSON data is invalid (cannot get parsed). Using default data."
+      );
+      return DATA as any;
+    }
+  }, [overrideRaw]);
+
+  const COLOR_MAP = (currentData as any).color_mapping as Record<
+    string,
+    string
+  >;
+  const SONG_DATA = (currentData as any).songs as Record<string, string>;
+
   const [songKey, setSongKey] = useState<string>(Object.keys(SONG_DATA)[0]);
   const [mode, setMode] = useState<Mode>("static");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -154,6 +187,17 @@ export default function App() {
           </div>
 
           <div style={styles.rightGroup}>
+            <button
+              style={{ ...styles.link, marginLeft: 8 }}
+              onClick={() => {
+                setEditorContent(JSON.stringify(currentData, null, 2));
+                setEditorError(null);
+                setEditorOpen(true);
+              }}
+            >
+              Edit Data
+            </button>
+
             <a
               href="https://github.com/kopp/make-that-pipe-sound"
               target="_blank"
@@ -164,6 +208,62 @@ export default function App() {
             </a>
           </div>
         </header>
+      )}
+
+      {editorOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3>Edit data.json (client-side only)</h3>
+            <textarea
+              style={styles.textarea}
+              value={editorContent}
+              onChange={(e) => setEditorContent(e.target.value)}
+            />
+            {editorError && <div style={styles.error}>{editorError}</div>}
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button
+                style={styles.button}
+                onClick={() => {
+                  try {
+                    const parsed = JSON.parse(editorContent);
+                    // save override
+                    localStorage.setItem(
+                      LOCAL_STORAGE_KEY,
+                      JSON.stringify(parsed)
+                    );
+                    setOverrideRaw(JSON.stringify(parsed));
+                    // set song key to first song if needed
+                    const first = parsed?.songs && Object.keys(parsed.songs)[0];
+                    if (first) setSongKey(first);
+                    setEditorOpen(false);
+                  } catch (err: any) {
+                    setEditorError(String(err.message || err));
+                  }
+                }}
+              >
+                Save
+              </button>
+              <button
+                style={styles.button}
+                onClick={() => {
+                  setEditorOpen(false);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                style={styles.button}
+                onClick={() => {
+                  localStorage.removeItem(LOCAL_STORAGE_KEY);
+                  setOverrideRaw(null);
+                  setEditorOpen(false);
+                }}
+              >
+                Revert to Default
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* --- Play Area --- */}
@@ -179,6 +279,7 @@ export default function App() {
                 note={note}
                 isActive={i === currentIndex}
                 onClick={() => setCurrentIndex(i)}
+                colorMap={COLOR_MAP}
               />
             ))}
           </div>
@@ -189,6 +290,7 @@ export default function App() {
               note={notes[currentIndex]}
               isActive={true}
               isLarge={true}
+              colorMap={COLOR_MAP}
             />
 
             {/* Upcoming Notes */}
@@ -196,7 +298,12 @@ export default function App() {
               {notes
                 .slice(currentIndex + 1, currentIndex + 1 + UPCOMING_COUNT)
                 .map((note, i) => (
-                  <NoteCard key={i} note={note} isActive={false} />
+                  <NoteCard
+                    key={i}
+                    note={note}
+                    isActive={false}
+                    colorMap={COLOR_MAP}
+                  />
                 ))}
             </div>
             <div style={styles.tapPrompt}>
@@ -215,13 +322,15 @@ function NoteCard({
   isActive,
   isLarge,
   onClick,
+  colorMap,
 }: {
   note: Note;
   isActive: boolean;
   isLarge?: boolean;
   onClick?: () => void;
+  colorMap?: Record<string, string>;
 }) {
-  const color = (COLOR_MAP as Record<string, string>)[note.pitch] || "#555";
+  const color = (colorMap || {})[note.pitch] || "#555";
   const isDarkColor = color === "black" || color === "red" || color === "blue";
 
   return (
@@ -353,5 +462,37 @@ const styles: Record<string, React.CSSProperties> = {
     border: "none",
     cursor: "pointer",
     fontSize: "1.1rem",
+  },
+  textarea: {
+    width: "80vw",
+    height: "50vh",
+    fontFamily: "monospace",
+    fontSize: "0.9rem",
+    padding: "8px",
+    borderRadius: "6px",
+    border: "1px solid #444",
+    background: "#111",
+    color: "white",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 50,
+  },
+  modal: {
+    background: "#222",
+    padding: "1rem",
+    borderRadius: "8px",
+    maxWidth: "90vw",
+    maxHeight: "90vh",
+    overflow: "auto",
+  },
+  error: {
+    color: "#ff6666",
+    marginTop: "8px",
   },
 };
