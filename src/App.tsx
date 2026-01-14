@@ -6,6 +6,8 @@ type Mode = "static" | "dynamic";
 
 const BASE_UNIT = 80; // Width of a note with duration 1
 const UPCOMING_COUNT = 3; // Parameter: how many notes to preview in dynamic mode
+const KEYS_NEXT = ["Space", "Enter", "Right", "PageDown"];
+const KEYS_PREVIOUS = ["Left", "PageUp"];
 
 // Parse the mini-language string into Note[]
 function parseSongString(song: string | undefined): Note[] {
@@ -111,8 +113,8 @@ export default function App() {
   // Handle keyboard (Space or Enter to advance)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" || e.code === "Enter") nextNote();
-      else if (e.code === "ArrowLeft") prevNote();
+      if (KEYS_NEXT.includes(e.code)) nextNote();
+      else if (KEYS_PREVIOUS.includes(e.code)) prevNote();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
