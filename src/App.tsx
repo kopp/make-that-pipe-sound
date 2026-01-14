@@ -100,56 +100,56 @@ export default function App() {
       {/* --- Header Controls --- */}
       {headerVisible && (
         <header style={styles.header}>
-        <div style={styles.controlGroup}>
-          <label>Song:</label>
-          <select
-            value={songKey}
-            onChange={(e) => setSongKey(e.target.value)}
-            style={styles.select}
-          >
-            {Object.keys(SONG_DATA).map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div style={styles.controlGroup}>
+            <label>Song:</label>
+            <select
+              value={songKey}
+              onChange={(e) => setSongKey(e.target.value)}
+              style={styles.select}
+            >
+              {Object.keys(SONG_DATA).map((key) => (
+                <option key={key} value={key}>
+                  {key}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div style={styles.controlGroup}>
-          <label>Mode:</label>
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value as Mode)}
-            style={styles.select}
-          >
-            <option value="static">Static (Scroll)</option>
-            <option value="dynamic">Dynamic (Play)</option>
-          </select>
-        </div>
+          <div style={styles.controlGroup}>
+            <label>Mode:</label>
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value as Mode)}
+              style={styles.select}
+            >
+              <option value="static">Static (Scroll)</option>
+              <option value="dynamic">Dynamic (Play)</option>
+            </select>
+          </div>
 
-        <div style={styles.controlGroup}>
-          <button
-            style={styles.button}
-            onClick={resetNotes}
-            aria-label="Reset to first note"
-          >
-            Reset
-          </button>
-          <button
-            style={styles.button}
-            onClick={prevNote}
-            aria-label="Previous note"
-          >
-            Back
-          </button>
-          <button
-            style={styles.button}
-            onClick={nextNote}
-            aria-label="Next note"
-          >
-            Forward
-          </button>
-        </div>
+          <div style={styles.controlGroup}>
+            <button
+              style={styles.button}
+              onClick={resetNotes}
+              aria-label="Reset to first note"
+            >
+              Reset
+            </button>
+            <button
+              style={styles.button}
+              onClick={prevNote}
+              aria-label="Previous note"
+            >
+              Back
+            </button>
+            <button
+              style={styles.button}
+              onClick={nextNote}
+              aria-label="Next note"
+            >
+              Forward
+            </button>
+          </div>
         </header>
       )}
 
