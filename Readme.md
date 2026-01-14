@@ -8,7 +8,7 @@ For German version see below.
 Make simple pipe instruments and play them together.
 Everyone gets a single pipe of a defined length and has to hit on one end of the pipe.
 Each pipe has a color to distinguish it.
-A web app shows the colors to hit on.
+[This web app](https://kopp.github.io/make-that-pipe-sound/) shows the colors to hit on.
 This makes a quick and simple orchestra, quite some fun and even some team building.
 
 
@@ -47,7 +47,7 @@ Apply this to the values given below to add more notes.
 Baue einfache Rohrinstrumente und spielt sie zusammen.
 Jede Person erhält ein einzelnes Rohr einer festgelegten Länge und muss an einem Ende des Rohrs anschlagen.
 Jedes Rohr hat eine Farbe zur Unterscheidung.
-Eine Web-App zeigt die zu treffenden Farben an.
+[Diese Web-App](https://kopp.github.io/make-that-pipe-sound/) zeigt die zu spielenden Farben an.
 Das ergibt ein schnelles und einfaches Orchester, macht viel Spaß und fördert sogar Teambuilding.
 
 

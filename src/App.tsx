@@ -150,6 +150,17 @@ export default function App() {
               Forward
             </button>
           </div>
+
+          <div style={styles.rightGroup}>
+            <a
+              href="https://github.com/kopp/make-that-pipe-sound"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.link}
+            >
+              About
+            </a>
+          </div>
         </header>
       )}
 
@@ -250,6 +261,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   header: {
     padding: "1rem",
+    paddingLeft: "3rem",
     display: "flex",
     gap: "20px",
     background: "#2a2a2a",
@@ -268,6 +280,20 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#444",
     color: "white",
     fontSize: "1rem",
+  },
+  link: {
+    color: "white",
+    textDecoration: "none",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    background: "#333",
+    display: "inline-block",
+  },
+  rightGroup: {
+    marginLeft: "auto",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
   },
   main: {
     flex: 1,
@@ -316,7 +342,7 @@ const styles: Record<string, React.CSSProperties> = {
   burgerButton: {
     position: "absolute",
     top: "10px",
-    right: "10px",
+    left: "10px",
     zIndex: 20,
     padding: "8px 10px",
     borderRadius: "6px",
