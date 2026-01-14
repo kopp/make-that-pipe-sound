@@ -1,10 +1,4 @@
 {
-  "Twinkle Twinkle": [
-    { "pitch": "C4", "duration": 1 }, { "pitch": "C4", "duration": 1 },
-    { "pitch": "G4", "duration": 1 }, { "pitch": "G4", "duration": 1 }
-  ],
-  "Mary Had A Little Lamb": [
-    { "pitch": "E4", "duration": 1 }, { "pitch": "D4", "duration": 1 },
-    { "pitch": "C4", "duration": 1 }, { "pitch": "D4", "duration": 1 }
-  ]
+  "Alle meine Entchen": "C4 D4 E4 F4 G4*2 G4*2 A4 A4 A4 A4 G4*4 A4 A4 A4 A4 G4*4 F4 F4 F4 F4 E4*2 E4*2 G4 G4 G4 G4 C4*4",
+  "Mary Had A Little Lamb": "E4 D4 C4 D4"
 }
