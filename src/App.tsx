@@ -6,8 +6,8 @@ type Mode = "static" | "dynamic";
 
 const BASE_UNIT = 80; // Width of a note with duration 1
 const INITIAL_UPCOMING_COUNT = 5; // Parameter: how many notes to preview in dynamic mode
-const KEYS_NEXT = ["Space", "Enter", "Right", "PageDown"];
-const KEYS_PREVIOUS = ["Left", "PageUp"];
+const KEYS_NEXT = ["Space", "Enter", "ArrowRight", "PageDown"];
+const KEYS_PREVIOUS = ["ArrowLeft", "PageUp"];
 const TRANSITION_MS = 100;
 
 // Parse the mini-language string into Note[]
@@ -214,14 +214,18 @@ export default function App() {
                   onClick={() => setShowDynamicDetails((v) => !v)}
                   aria-pressed={showDynamicDetails}
                   aria-label={
-                    showDynamicDetails ? "Hide dynamic settings" : "Show dynamic settings"
+                    showDynamicDetails
+                      ? "Hide dynamic settings"
+                      : "Show dynamic settings"
                   }
                   style={styles.gearButton}
                 >
                   ⚙
                 </button>
                 {showDynamicDetails && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
                     <label>Upcoming:</label>
                     <input
                       type="number"
@@ -236,7 +240,9 @@ export default function App() {
                       }}
                       style={styles.numberInput}
                     />
-                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <label
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
                       <input
                         type="checkbox"
                         checked={smallFollowing}
