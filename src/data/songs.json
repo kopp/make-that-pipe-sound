@@ -1,0 +1,10 @@
+{
+  "Twinkle Twinkle": [
+    { "pitch": "C4", "duration": 1 }, { "pitch": "C4", "duration": 1 },
+    { "pitch": "G4", "duration": 1 }, { "pitch": "G4", "duration": 1 }
+  ],
+  "Mary Had A Little Lamb": [
+    { "pitch": "E4", "duration": 1 }, { "pitch": "D4", "duration": 1 },
+    { "pitch": "C4", "duration": 1 }, { "pitch": "D4", "duration": 1 }
+  ]
+}
