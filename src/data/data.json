@@ -10,6 +10,9 @@
   "songs": {
     "Alle meine Entchen": "C4 D4 E4 F4 G4*2 G4*2 A4 A4 A4 A4 G4*4 A4 A4 A4 A4 G4*4 F4 F4 F4 F4 E4*2 E4*2 G4 G4 G4 G4 C4*4",
     "Bruder Jakob": "C D E C C D E C E F G*2 E F G*2 G/2 A/2 G/2 F/2 E C G/2 A/2 G/2 F/2 E C C G3 C*2 C G3 C*2",
-    "Hänschen klein": "G E E*2 F D D*2 C D E F G G G*2 G E E*2 F D D*2 C E G G C*4 D D D D D E F*2 E E E E E F G*2 G E E*2 F D D*2 C E G G C*4"
+    "Hänschen klein": "G E E*2 F D D*2 C D E F G G G*2 G E E*2 F D D*2 C E G G C*4 D D D D D E F*2 E E E E E F G*2 G E E*2 F D D*2 C E G G C*4",
+    "Morgen kommt der Weihnachtsmann": "C C G G A A G*2 F F E E D*2 C G G F F E E D*2 G G F F E E D*2 C C G G A A G*2 F F E E D*2 C",
+    "Twinkle twinkle little Star": "C C G G A A G*2 F F E E D*2 C G G F F E E D*2 G G F F E E D*2 C C G G A A G*2 F F E E D*2 C",
+    "Winter Adee": "E E D C*3 E E D C*3 E F G G F/2 E/2 F D E F F E/2 D/2 E E E F G*3 E E D C*3"
   }
 }

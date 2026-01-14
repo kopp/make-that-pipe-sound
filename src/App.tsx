@@ -93,6 +93,8 @@ export default function App() {
   );
   // following notes in the dynamic mode ignore the duration and are all same size
   const [smallFollowing, setSmallFollowing] = useState<boolean>(true);
+  // whether to show the detailed dynamic-mode controls (hidden under gear)
+  const [showDynamicDetails, setShowDynamicDetails] = useState<boolean>(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -159,6 +161,11 @@ export default function App() {
     setCurrentIndex(0);
   }, [songKey]);
 
+  // hide dynamic details when leaving dynamic mode
+  useEffect(() => {
+    if (mode !== "dynamic") setShowDynamicDetails(false);
+  }, [mode]);
+
   // When switching out of dynamic mode, cancel any pending transition
   useEffect(() => {
     if (mode !== "dynamic" && isTransitioning) setIsTransitioning(false);
@@ -203,30 +210,42 @@ export default function App() {
             </select>
             {mode === "dynamic" && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <label>Upcoming:</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={upcomingCount}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setUpcomingCount(
-                      Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0
-                    );
-                  }}
-                  style={styles.numberInput}
-                />
-                <label
-                  style={{ display: "flex", alignItems: "center", gap: 6 }}
+                <button
+                  onClick={() => setShowDynamicDetails((v) => !v)}
+                  aria-pressed={showDynamicDetails}
+                  aria-label={
+                    showDynamicDetails ? "Hide dynamic settings" : "Show dynamic settings"
+                  }
+                  style={styles.gearButton}
                 >
-                  <input
-                    type="checkbox"
-                    checked={smallFollowing}
-                    onChange={(e) => setSmallFollowing(e.target.checked)}
-                  />
-                  <span>Small following</span>
-                </label>
+                  ⚙
+                </button>
+                {showDynamicDetails && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <label>Upcoming:</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={upcomingCount}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        setUpcomingCount(
+                          Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0
+                        );
+                      }}
+                      style={styles.numberInput}
+                    />
+                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={smallFollowing}
+                        onChange={(e) => setSmallFollowing(e.target.checked)}
+                      />
+                      <span>Small following</span>
+                    </label>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -534,6 +553,15 @@ const styles: Record<string, React.CSSProperties> = {
     border: "none",
     cursor: "pointer",
     fontSize: "1.1rem",
+  },
+  gearButton: {
+    padding: "6px 8px",
+    borderRadius: "6px",
+    background: "#333",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "1rem",
   },
   textarea: {
     width: "80vw",
