@@ -362,7 +362,12 @@ export default function App() {
 
       {/* --- Play Area --- */}
       <main
-        style={styles.main}
+        style={{
+          ...styles.main,
+          alignItems: mode === "static" ? "flex-start" : "center",
+          justifyContent: mode === "static" ? "flex-start" : "center",
+          cursor: mode === "static" ? "default" : "pointer",
+        }}
         onClick={mode === "dynamic" ? nextNote : undefined}
       >
         {isTransitioning ? (
