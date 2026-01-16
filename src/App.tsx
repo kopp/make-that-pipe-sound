@@ -36,9 +36,14 @@ function parseSongString(song: string | undefined): Note[] {
         duration = 1;
       }
 
-      // If no octave digit provided, default to octave 4 (e.g., C -> C4)
-      if (!/\d$/.test(pitch)) {
-        pitch = `${pitch}4`;
+      // If token is an explicit pause, keep it as 'pause' (no octave)
+      if (pitch.trim().toLowerCase() === "pause") {
+        // leave as-is, duration already set
+      } else {
+        // If no octave digit provided, default to octave 4 (e.g., C -> C4)
+        if (!/\d$/.test(pitch)) {
+          pitch = `${pitch}4`;
+        }
       }
 
       return { pitch, duration } as Note;
@@ -276,6 +281,11 @@ export default function App() {
     if (!playAudio) return;
     const note = notes[currentIndex];
     if (!note) return;
+    // do not play audio for pause notes
+    if (String(note.pitch).toLowerCase() === "pause") {
+      stopNoteAudio();
+      return;
+    }
     startNoteAudio(note.pitch);
     return () => {
       stopNoteAudio();
@@ -654,6 +664,7 @@ function NoteCard({
   unitSize?: number;
 }) {
   const raw = (colorMap || {})[note.pitch] || "#555";
+  const isPause = String(note.pitch).toLowerCase() === "pause";
   const tokens = String(raw)
     .split(",")
     .map((s) => s.trim())
@@ -702,6 +713,12 @@ function NoteCard({
   // Prevent the background from bleeding into the border area
   bgStyle.backgroundClip = "padding-box";
 
+  // If this is a pause, render transparent background and no border
+  if (isPause) {
+    bgStyle.background = "transparent";
+    bgStyle.backgroundColor = "transparent";
+  }
+
   return (
     <div
       onClick={onClick}
@@ -723,7 +740,17 @@ function NoteCard({
     >
       <span
         style={
-          isMulti
+          isPause
+            ? {
+                fontSize: isLarge ? "2rem" : "1.25rem",
+                padding: "0",
+                background: "transparent",
+                color: "white",
+                borderRadius: "0",
+                position: "relative",
+                zIndex: 3,
+              }
+            : isMulti
             ? {
                 backgroundColor: "#000",
                 color: "white",
@@ -743,7 +770,7 @@ function NoteCard({
               }
         }
       >
-        {note.pitch}
+        {isPause ? "🤫" : note.pitch}
       </span>
     </div>
   );
