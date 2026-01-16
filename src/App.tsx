@@ -439,6 +439,71 @@ export default function App() {
   );
 }
 
+// --- Color helpers ---
+const NAMED_COLOR_MAP: Record<string, string> = {
+  black: "#000000",
+  white: "#ffffff",
+  red: "#ff0000",
+  blue: "#0000ff",
+  yellow: "#ffff00",
+  green: "#00ff00",
+  orange: "#ffa500",
+  brown: "#a52a2a",
+  purple: "#800080",
+  pink: "#ffc0cb",
+  gray: "#808080",
+  grey: "#808080",
+};
+
+function clamp(v: number, a = 0, b = 255) {
+  return Math.max(a, Math.min(b, Math.round(v)));
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  if (!hex) return null;
+  const h = hex.replace("#", "").trim();
+  if (h.length === 3) {
+    const r = parseInt(h[0] + h[0], 16);
+    const g = parseInt(h[1] + h[1], 16);
+    const b = parseInt(h[2] + h[2], 16);
+    return { r, g, b };
+  }
+  if (h.length === 6) {
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return { r, g, b };
+  }
+  return null;
+}
+
+function rgbToHex(r: number, g: number, b: number) {
+  return "#" + [r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("");
+}
+
+function lightenHex(hex: string, amount = 0.12) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const r = clamp(rgb.r + (255 - rgb.r) * amount);
+  const g = clamp(rgb.g + (255 - rgb.g) * amount);
+  const b = clamp(rgb.b + (255 - rgb.b) * amount);
+  return rgbToHex(r, g, b);
+}
+
+function parseColorToken(token: string, appBg = "#1a1a1a") {
+  // token may be 'blank', a hex like #ff0, or a named color
+  const t = token.trim().toLowerCase();
+  if (!t) return null;
+  if (t === "blank") {
+    // return a slightly lighter version of the app background
+    return lightenHex(appBg, 0.12);
+  }
+  if (t.startsWith("#")) return t;
+  if (NAMED_COLOR_MAP[t]) return NAMED_COLOR_MAP[t];
+  // fallback: return the original token and let browser try to resolve it
+  return token;
+}
+
 // --- Sub-component ---
 function NoteCard({
   note,
@@ -455,34 +520,95 @@ function NoteCard({
   colorMap?: Record<string, string>;
   unitSize?: number;
 }) {
-  const color = (colorMap || {})[note.pitch] || "#555";
-  const isDarkColor = color === "black" || color === "red" || color === "blue";
+  const raw = (colorMap || {})[note.pitch] || "#555";
+  const tokens = String(raw)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const appBg = (styles.appContainer.backgroundColor as string) || "#1a1a1a";
+  const parsed = tokens.map((t) => parseColorToken(t, appBg));
+  const isMulti = parsed.length > 1;
+
+  // determine text color by sampling the first resolved color if possible
+  const sample = parsed[0] || "#555";
+  let sampleRgb = hexToRgb(String(sample)) || null;
+  // if sample isn't hex we try to map by name
+  if (!sampleRgb && typeof sample === "string") {
+    const mapped = NAMED_COLOR_MAP[(sample as string).toLowerCase()];
+    sampleRgb = mapped ? hexToRgb(mapped) : null;
+  }
+  const luminance = sampleRgb
+    ? (0.2126 * sampleRgb.r + 0.7152 * sampleRgb.g + 0.0722 * sampleRgb.b) / 255
+    : 0.5;
+  const isDarkColor = luminance < 0.5;
   const size = unitSize ?? DEFAULT_UNIT;
-  const borderSize = Math.max(Math.round(size / 5), 5);
+  // active border thickness (visible when active)
+  const activeBorder = Math.max(Math.round(size / 12), 6);
+  // base content width/height for the note (without considering outer shell)
+  const baseWidth = note.duration * (isLarge ? size * 1.5 : size);
+  const baseHeight = isLarge ? Math.round(size * 3.75) : Math.round(size);
+  // outer footprint width/height so active (with thicker border) and
+  // inactive (with thinner border) occupy the same overall box size.
+  const outerWidth = baseWidth + 2 * activeBorder;
+  const outerHeight = baseHeight + 2 * activeBorder;
+  const bgStyle: React.CSSProperties = {};
+  if (!isMulti) {
+    bgStyle.backgroundColor = parsed[0] || "#555";
+  } else {
+    const n = parsed.length;
+    const seg = 100 / n;
+    const stops = parsed
+      .map((c, i) => {
+        const start = (i * seg).toFixed(4);
+        const end = ((i + 1) * seg).toFixed(4);
+        return `${c} ${start}% ${end}%`;
+      })
+      .join(", ");
+    bgStyle.background = `linear-gradient(to bottom, ${stops})`;
+  }
+  // Prevent the background from bleeding into the border area
+  bgStyle.backgroundClip = "padding-box";
 
   return (
     <div
       onClick={onClick}
       style={{
         ...styles.note,
-        backgroundColor: color,
-        width: `${note.duration * (isLarge ? size * 1.5 : size)}px`,
-        height: isLarge
-          ? `${Math.round(size * 3.75)}px`
-          : `${Math.round(size)}px`,
-        // Size of the borders needs to be the same to ensure that the NoteCard
-        // takes the same space in both active/inactive states, otherwise the
-        // layout shifts while playing.
-        border: isActive
-          ? `${borderSize}px solid #00d4ff`
-          : `${borderSize}px solid rgba(255,255,255,0.1)`,
+        ...bgStyle,
+        // Ensure that the NoteCard takes the same space in both active/inactive
+        // states, otherwise the layout shifts while playing.
+        boxSizing: "border-box",
+        width: `${outerWidth}px`,
+        height: `${outerHeight}px`,
+        borderStyle: isActive ? "solid" : "none",
+        borderWidth: isActive ? `${activeBorder}px` : "0px",
+        borderColor: isActive ? "#00d4ff" : undefined,
         color: isDarkColor ? "white" : "black",
-        transform: isActive ? "scale(1.05)" : "scale(1)",
+        transform: isActive ? "scale(1)" : "scale(1)",
         zIndex: isActive ? 2 : 1,
       }}
     >
       <span
-        style={{ fontSize: isLarge ? "1.5rem" : "1rem", fontWeight: "bold" }}
+        style={
+          isMulti
+            ? {
+                backgroundColor: "#000",
+                color: "white",
+                padding: "6px 10px",
+                borderRadius: "8px",
+                fontSize: isLarge ? "1.5rem" : "1rem",
+                fontWeight: "bold",
+                // keep label above borders
+                position: "relative",
+                zIndex: 3,
+              }
+            : {
+                fontSize: isLarge ? "1.5rem" : "1rem",
+                fontWeight: "bold",
+                position: "relative",
+                zIndex: 3,
+              }
+        }
       >
         {note.pitch}
       </span>
