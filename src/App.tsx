@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import DATA from "./data/data.json";
 
 type Note = { pitch: string; duration: number };
@@ -113,6 +119,8 @@ export default function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
+  // whether to show floating bottom controls in static mode
+  const [floatingControls, setFloatingControls] = useState<boolean>(false);
 
   // Audio refs
   const audioCtxRef = React.useRef<AudioContext | null>(null);
@@ -419,6 +427,19 @@ export default function App() {
                     <span>Audio</span>
                   </label>
 
+                  {mode === "static" && (
+                    <label
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={floatingControls}
+                        onChange={(e) => setFloatingControls(e.target.checked)}
+                      />
+                      <span>Floating controls</span>
+                    </label>
+                  )}
+
                   {mode === "dynamic" && (
                     <>
                       <label>Upcoming:</label>
@@ -568,6 +589,8 @@ export default function App() {
           alignItems: mode === "static" ? "flex-start" : "center",
           justifyContent: mode === "static" ? "flex-start" : "center",
           cursor: mode === "static" ? "default" : "pointer",
+          paddingBottom:
+            mode === "static" && floatingControls ? "6.5rem" : undefined,
         }}
         onClick={mode === "dynamic" ? nextNote : undefined}
       >
@@ -621,6 +644,23 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {mode === "static" && floatingControls && (
+        <div style={styles.floatingControlsContainer} aria-hidden={false}>
+          <button style={styles.floatingButton} onClick={nextNote}>
+            Forward
+          </button>
+          <button style={styles.floatingButton} onClick={resetNotes}>
+            Reset
+          </button>
+          <button style={styles.floatingButton} onClick={prevNote}>
+            Back
+          </button>
+          <button style={styles.floatingButton} onClick={nextNote}>
+            Forward
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -917,6 +957,27 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#888",
     textTransform: "uppercase",
     letterSpacing: "1px",
+  },
+  floatingControlsContainer: {
+    position: "fixed",
+    bottom: "12px",
+    width: "97%",
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    justifyContent: "space-between",
+    zIndex: 60,
+    pointerEvents: "auto",
+  },
+  floatingButton: {
+    padding: "12px 18px",
+    fontSize: "1.05rem",
+    borderRadius: "10px",
+    border: "none",
+    background: "#00d4ff",
+    color: "#002a33",
+    boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+    cursor: "pointer",
   },
   note: {
     display: "flex",
