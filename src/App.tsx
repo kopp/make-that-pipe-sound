@@ -97,9 +97,16 @@ export default function App() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   // unit size for note width/height (user-configurable)
   const [unitSize, setUnitSize] = useState<number>(DEFAULT_UNIT);
+  // whether to play audio for active notes
+  const [playAudio, setPlayAudio] = useState<boolean>(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
+
+  // Audio refs
+  const audioCtxRef = React.useRef<AudioContext | null>(null);
+  const oscRef = React.useRef<OscillatorNode | null>(null);
+  const gainRef = React.useRef<GainNode | null>(null);
 
   // SONG_DATA now maps song names -> mini-language strings
   const notes = useMemo(() => {
@@ -171,6 +178,122 @@ export default function App() {
     if (mode !== "dynamic" && isTransitioning) setIsTransitioning(false);
   }, [mode, isTransitioning]);
 
+  // --- Audio helpers ---
+  function noteToMidiNumber(note: string): number {
+    // note like C4 or A#3
+    const m = String(note)
+      .trim()
+      .match(/^([A-Ga-g])([#b]?)(-?\d+)?$/);
+    if (!m) return 60;
+    const base = m[1].toUpperCase();
+    const acc = m[2] || "";
+    const octave = m[3] ? parseInt(m[3], 10) : 4;
+    const order: Record<string, number> = {
+      C: 0,
+      "C#": 1,
+      DB: 1,
+      D: 2,
+      "D#": 3,
+      EB: 3,
+      E: 4,
+      F: 5,
+      "F#": 6,
+      GB: 6,
+      G: 7,
+      "G#": 8,
+      AB: 8,
+      A: 9,
+      "A#": 10,
+      BB: 10,
+      B: 11,
+    };
+    const key = (base + (acc || "")).toUpperCase();
+    const semitone = order[key] ?? 0;
+    return 12 * (octave + 1) + semitone;
+  }
+
+  function midiNumberToFreq(n: number) {
+    return 440 * Math.pow(2, (n - 69) / 12);
+  }
+
+  function startNoteAudio(pitch: string) {
+    if (!playAudio) return;
+    try {
+      if (!audioCtxRef.current)
+        audioCtxRef.current = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
+      const ctx = audioCtxRef.current as AudioContext;
+      // some browsers require resume on user gesture
+      ctx.resume().catch(() => {});
+
+      // stop previous
+      stopNoteAudio();
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      const midi = noteToMidiNumber(pitch);
+      const freq = midiNumberToFreq(midi);
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      oscRef.current = osc;
+      gainRef.current = gain;
+    } catch (e) {
+      // ignore audio errors
+      console.warn("audio start error", e);
+    }
+  }
+
+  function stopNoteAudio() {
+    try {
+      const osc = oscRef.current;
+      const gain = gainRef.current;
+      const ctx = audioCtxRef.current;
+      if (osc && gain && ctx) {
+        // ramp down quickly
+        gain.gain.cancelScheduledValues(ctx.currentTime);
+        gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.0, ctx.currentTime + 0.05);
+        try {
+          osc.stop(ctx.currentTime + 0.06);
+        } catch (e) {}
+        osc.disconnect();
+        gain.disconnect();
+      }
+    } catch (e) {
+      /* ignore */
+    } finally {
+      oscRef.current = null;
+      gainRef.current = null;
+    }
+  }
+
+  // Play audio when currentIndex changes (keep playing until next change)
+  useEffect(() => {
+    if (!playAudio) return;
+    const note = notes[currentIndex];
+    if (!note) return;
+    startNoteAudio(note.pitch);
+    return () => {
+      stopNoteAudio();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, playAudio]);
+
+  // Stop audio immediately when audio toggled off
+  useEffect(() => {
+    if (!playAudio) stopNoteAudio();
+    else if (playAudio) {
+      // start current note if any
+      const n = notes[currentIndex];
+      if (n) startNoteAudio(n.pitch);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playAudio]);
+
   return (
     <div style={styles.appContainer}>
       <button
@@ -236,6 +359,16 @@ export default function App() {
                     }}
                     style={styles.numberInput}
                   />
+                  <label
+                    style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={playAudio}
+                      onChange={(e) => setPlayAudio(e.target.checked)}
+                    />
+                    <span>Audio</span>
+                  </label>
 
                   {mode === "dynamic" && (
                     <>
