@@ -4,7 +4,7 @@ import DATA from "./data/data.json";
 type Note = { pitch: string; duration: number };
 type Mode = "static" | "dynamic";
 
-const BASE_UNIT = 80; // Width of a note with duration 1
+const DEFAULT_UNIT = 80; // Default width of a note with duration 1
 const INITIAL_UPCOMING_COUNT = 5; // Parameter: how many notes to preview in dynamic mode
 const KEYS_NEXT = ["Space", "Enter", "ArrowRight", "PageDown"];
 const KEYS_PREVIOUS = ["ArrowLeft", "PageUp"];
@@ -93,8 +93,10 @@ export default function App() {
   );
   // following notes in the dynamic mode ignore the duration and are all same size
   const [smallFollowing, setSmallFollowing] = useState<boolean>(true);
-  // whether to show the detailed dynamic-mode controls (hidden under gear)
-  const [showDynamicDetails, setShowDynamicDetails] = useState<boolean>(false);
+  // whether to show the settings panel (hidden under gear)
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  // unit size for note width/height (user-configurable)
+  const [unitSize, setUnitSize] = useState<number>(DEFAULT_UNIT);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -161,10 +163,8 @@ export default function App() {
     setCurrentIndex(0);
   }, [songKey]);
 
-  // hide dynamic details when leaving dynamic mode
-  useEffect(() => {
-    if (mode !== "dynamic") setShowDynamicDetails(false);
-  }, [mode]);
+  // Keep settings panel open across mode switches; dynamic-only controls
+  // are conditionally rendered inside the panel when `mode === 'dynamic'`.
 
   // When switching out of dynamic mode, cancel any pending transition
   useEffect(() => {
@@ -208,52 +208,70 @@ export default function App() {
               <option value="static">Static (Scroll)</option>
               <option value="dynamic">Dynamic (Play)</option>
             </select>
-            {mode === "dynamic" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button
-                  onClick={() => setShowDynamicDetails((v) => !v)}
-                  aria-pressed={showDynamicDetails}
-                  aria-label={
-                    showDynamicDetails
-                      ? "Hide dynamic settings"
-                      : "Show dynamic settings"
-                  }
-                  style={styles.gearButton}
-                >
-                  ⚙
-                </button>
-                {showDynamicDetails && (
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
-                    <label>Upcoming:</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={20}
-                      value={upcomingCount}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        setUpcomingCount(
-                          Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0
-                        );
-                      }}
-                      style={styles.numberInput}
-                    />
-                    <label
-                      style={{ display: "flex", alignItems: "center", gap: 6 }}
-                    >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={() => setShowSettings((v) => !v)}
+                aria-pressed={showSettings}
+                aria-label={showSettings ? "Hide settings" : "Show settings"}
+                style={styles.gearButton}
+              >
+                ⚙
+              </button>
+
+              {showSettings && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <label>Size:</label>
+                  <input
+                    type="number"
+                    min={10}
+                    max={400}
+                    value={unitSize}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setUnitSize(
+                        Number.isFinite(v)
+                          ? Math.max(10, Math.floor(v))
+                          : DEFAULT_UNIT
+                      );
+                    }}
+                    style={styles.numberInput}
+                  />
+
+                  {mode === "dynamic" && (
+                    <>
+                      <label>Upcoming:</label>
                       <input
-                        type="checkbox"
-                        checked={smallFollowing}
-                        onChange={(e) => setSmallFollowing(e.target.checked)}
+                        type="number"
+                        min={0}
+                        max={20}
+                        value={upcomingCount}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setUpcomingCount(
+                            Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0
+                          );
+                        }}
+                        style={styles.numberInput}
                       />
-                      <span>Small following</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={smallFollowing}
+                          onChange={(e) => setSmallFollowing(e.target.checked)}
+                        />
+                        <span>Small following</span>
+                      </label>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={styles.controlGroup}>
@@ -381,6 +399,7 @@ export default function App() {
                 isActive={i === currentIndex}
                 onClick={() => setCurrentIndex(i)}
                 colorMap={COLOR_MAP}
+                unitSize={unitSize}
               />
             ))}
           </div>
@@ -392,6 +411,7 @@ export default function App() {
               isActive={true}
               isLarge={true}
               colorMap={COLOR_MAP}
+              unitSize={unitSize}
             />
 
             {/* Upcoming Notes */}
@@ -405,6 +425,7 @@ export default function App() {
                     isActive={false}
                     isLarge={false}
                     colorMap={COLOR_MAP}
+                    unitSize={unitSize}
                   />
                 ))}
             </div>
@@ -425,15 +446,19 @@ function NoteCard({
   isLarge,
   onClick,
   colorMap,
+  unitSize,
 }: {
   note: Note;
   isActive: boolean;
   isLarge?: boolean;
   onClick?: () => void;
   colorMap?: Record<string, string>;
+  unitSize?: number;
 }) {
   const color = (colorMap || {})[note.pitch] || "#555";
   const isDarkColor = color === "black" || color === "red" || color === "blue";
+  const size = unitSize ?? DEFAULT_UNIT;
+  const borderSize = Math.max(Math.round(size / 5), 5);
 
   return (
     <div
@@ -441,14 +466,16 @@ function NoteCard({
       style={{
         ...styles.note,
         backgroundColor: color,
-        width: `${note.duration * (isLarge ? BASE_UNIT * 1.5 : BASE_UNIT)}px`,
-        height: isLarge ? "300px" : "80px",
+        width: `${note.duration * (isLarge ? size * 1.5 : size)}px`,
+        height: isLarge
+          ? `${Math.round(size * 3.75)}px`
+          : `${Math.round(size)}px`,
         // Size of the borders needs to be the same to ensure that the NoteCard
         // takes the same space in both active/inactive states, otherwise the
         // layout shifts while playing.
         border: isActive
-          ? "15px solid #00d4ff"
-          : "15px solid rgba(255,255,255,0.1)",
+          ? `${borderSize}px solid #00d4ff`
+          : `${borderSize}px solid rgba(255,255,255,0.1)`,
         color: isDarkColor ? "white" : "black",
         transform: isActive ? "scale(1.05)" : "scale(1)",
         zIndex: isActive ? 2 : 1,
