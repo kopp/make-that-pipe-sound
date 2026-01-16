@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import DATA from "./data/data.json";
 
 type Note = { pitch: string; duration: number };
@@ -124,6 +124,44 @@ export default function App() {
     const raw = (SONG_DATA as Record<string, string>)[songKey];
     return parseSongString(raw);
   }, [songKey]);
+
+  // refs for scrolling behavior: main scroll container and per-note element refs
+  const mainRef = useRef<HTMLDivElement | null>(null);
+  const noteRefs = useRef<Array<HTMLDivElement | null>>([]);
+
+  // ensure refs array resets when notes change
+  useEffect(() => {
+    noteRefs.current = [];
+  }, [notes.length]);
+
+  // Auto-scroll when active note is in the lower part of the visible area
+  useEffect(() => {
+    if (mode !== "static") return;
+    const container = mainRef.current;
+    const activeEl = noteRefs.current[currentIndex];
+    if (!container || !activeEl) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const elRect = activeEl.getBoundingClientRect();
+
+    // threshold for 'lower part of screen' — when note's bottom is below 70% of container
+    const lowerThreshold = containerRect.top + containerRect.height * 0.7;
+    // small padding so note isn't flush against edge
+    const padding = 8;
+
+    if (elRect.bottom > lowerThreshold) {
+      const delta = elRect.bottom - lowerThreshold + padding;
+      container.scrollBy({ top: delta, behavior: "smooth" });
+    } else {
+      // if note is too high (optional: keep it reasonably visible)
+      const upperThreshold = containerRect.top + containerRect.height * 0.1;
+      if (elRect.top < upperThreshold) {
+        const delta = elRect.top - upperThreshold - padding;
+        container.scrollBy({ top: delta, behavior: "smooth" });
+      }
+    }
+    // include dependencies that affect layout
+  }, [currentIndex, mode, notes.length, unitSize]);
 
   // Logic to advance to next note.
   // If in `dynamic` mode, use a brief blank transition; in `static` mode advance immediately.
@@ -524,6 +562,7 @@ export default function App() {
 
       {/* --- Play Area --- */}
       <main
+        ref={mainRef}
         style={{
           ...styles.main,
           alignItems: mode === "static" ? "flex-start" : "center",
@@ -544,6 +583,9 @@ export default function App() {
                 onClick={() => setCurrentIndex(i)}
                 colorMap={COLOR_MAP}
                 unitSize={unitSize}
+                containerRef={(el: HTMLDivElement | null) => {
+                  noteRefs.current[i] = el;
+                }}
               />
             ))}
           </div>
@@ -656,6 +698,7 @@ function NoteCard({
   onClick,
   colorMap,
   unitSize,
+  containerRef,
 }: {
   note: Note;
   isActive: boolean;
@@ -663,6 +706,7 @@ function NoteCard({
   onClick?: () => void;
   colorMap?: Record<string, string>;
   unitSize?: number;
+  containerRef?: (el: HTMLDivElement | null) => void;
 }) {
   const raw = (colorMap || {})[note.pitch] || "#555";
   const isStart = String(note.pitch).toLowerCase() === "start";
@@ -722,6 +766,7 @@ function NoteCard({
   }
   return (
     <div
+      ref={containerRef}
       onClick={onClick}
       style={{
         ...styles.note,
