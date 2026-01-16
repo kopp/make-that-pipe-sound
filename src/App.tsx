@@ -977,6 +977,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#002a33",
     boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
     cursor: "pointer",
+    touchAction: "manipulation",
   },
   note: {
     display: "flex",
