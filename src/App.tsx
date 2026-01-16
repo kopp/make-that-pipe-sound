@@ -650,12 +650,6 @@ export default function App() {
           <button style={styles.floatingButton} onClick={nextNote}>
             Forward
           </button>
-          <button style={styles.floatingButton} onClick={resetNotes}>
-            Reset
-          </button>
-          <button style={styles.floatingButton} onClick={prevNote}>
-            Back
-          </button>
           <button style={styles.floatingButton} onClick={nextNote}>
             Forward
           </button>
