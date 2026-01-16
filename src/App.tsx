@@ -363,16 +363,10 @@ export default function App() {
                   <label>Size:</label>
                   <input
                     type="number"
-                    min={10}
-                    max={400}
                     value={unitSize}
                     onChange={(e) => {
                       const v = Number(e.target.value);
-                      setUnitSize(
-                        Number.isFinite(v)
-                          ? Math.max(10, Math.floor(v))
-                          : DEFAULT_UNIT
-                      );
+                      setUnitSize(Number.isFinite(v) ? v : DEFAULT_UNIT);
                     }}
                     style={styles.numberInput}
                   />
