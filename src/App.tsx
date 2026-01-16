@@ -13,41 +13,47 @@ const TRANSITION_MS = 100;
 // Parse the mini-language string into Note[]
 function parseSongString(song: string | undefined): Note[] {
   if (!song) return [];
-  return song
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((token) => {
-      let pitch = token;
-      let duration = 1;
+  const tokens = song.trim().split(/\s+/).filter(Boolean);
+  const notes = tokens.map((token) => {
+    let pitch = token;
+    let duration = 1;
 
-      if (token.includes("/")) {
-        const parts = token.split("/");
-        pitch = parts[0].trim();
-        const denom = parseFloat(parts[1]) || 1;
-        duration = 1 / denom;
-      } else if (token.includes("*")) {
-        const parts = token.split("*");
-        pitch = parts[0].trim();
-        const mult = parseFloat(parts[1]) || 1;
-        duration = mult;
-      } else {
-        pitch = token.trim();
-        duration = 1;
+    if (token.includes("/")) {
+      const parts = token.split("/");
+      pitch = parts[0].trim();
+      const denom = parseFloat(parts[1]) || 1;
+      duration = 1 / denom;
+    } else if (token.includes("*")) {
+      const parts = token.split("*");
+      pitch = parts[0].trim();
+      const mult = parseFloat(parts[1]) || 1;
+      duration = mult;
+    } else {
+      pitch = token.trim();
+      duration = 1;
+    }
+
+    // If token is an explicit pause, keep it as 'pause' (no octave)
+    if (pitch.trim().toLowerCase() === "pause") {
+      // leave as-is, duration already set
+    } else {
+      // If no octave digit provided, default to octave 4 (e.g., C -> C4)
+      if (!/\d$/.test(pitch)) {
+        pitch = `${pitch}4`;
       }
+    }
 
-      // If token is an explicit pause, keep it as 'pause' (no octave)
-      if (pitch.trim().toLowerCase() === "pause") {
-        // leave as-is, duration already set
-      } else {
-        // If no octave digit provided, default to octave 4 (e.g., C -> C4)
-        if (!/\d$/.test(pitch)) {
-          pitch = `${pitch}4`;
-        }
-      }
+    return { pitch, duration } as Note;
+  });
 
-      return { pitch, duration } as Note;
-    });
+  // Prepend a special transparent 'start' note so every song begins with it.
+  // If the first token is already 'start', don't add another.
+  if (notes.length === 0) return notes;
+  if (String(notes[0].pitch).toLowerCase() !== "start") {
+    notes.unshift({ pitch: "start", duration: 1 });
+  }
+
+  return notes;
 }
 
 function makeNoteWithDuration(note: Note, duration: number = 1): Note {
@@ -282,7 +288,8 @@ export default function App() {
     const note = notes[currentIndex];
     if (!note) return;
     // do not play audio for pause notes
-    if (String(note.pitch).toLowerCase() === "pause") {
+    const p = String(note.pitch).toLowerCase();
+    if (p === "pause" || p === "start") {
       stopNoteAudio();
       return;
     }
@@ -664,6 +671,7 @@ function NoteCard({
   unitSize?: number;
 }) {
   const raw = (colorMap || {})[note.pitch] || "#555";
+  const isStart = String(note.pitch).toLowerCase() === "start";
   const isPause = String(note.pitch).toLowerCase() === "pause";
   const tokens = String(raw)
     .split(",")
@@ -714,11 +722,10 @@ function NoteCard({
   bgStyle.backgroundClip = "padding-box";
 
   // If this is a pause, render transparent background and no border
-  if (isPause) {
+  if (isPause || isStart) {
     bgStyle.background = "transparent";
     bgStyle.backgroundColor = "transparent";
   }
-
   return (
     <div
       onClick={onClick}
@@ -730,9 +737,10 @@ function NoteCard({
         boxSizing: "border-box",
         width: `${outerWidth}px`,
         height: `${outerHeight}px`,
-        borderStyle: isActive ? "solid" : "none",
-        borderWidth: isActive ? `${activeBorder}px` : "0px",
-        borderColor: isActive ? "#00d4ff" : undefined,
+        // start cards never show a border; otherwise active cards get the blue border
+        borderStyle: isStart ? "none" : isActive ? "solid" : "none",
+        borderWidth: isStart ? "0px" : isActive ? `${activeBorder}px` : "0px",
+        borderColor: isStart ? undefined : isActive ? "#00d4ff" : undefined,
         color: isDarkColor ? "white" : "black",
         transform: isActive ? "scale(1)" : "scale(1)",
         zIndex: isActive ? 2 : 1,
@@ -740,7 +748,19 @@ function NoteCard({
     >
       <span
         style={
-          isPause
+          isStart
+            ? {
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: isLarge ? "1.25rem" : "1rem",
+                color: "white",
+                position: "relative",
+                zIndex: 3,
+              }
+            : isPause
             ? {
                 fontSize: isLarge ? "2rem" : "1.25rem",
                 padding: "0",
@@ -770,7 +790,7 @@ function NoteCard({
               }
         }
       >
-        {isPause ? "🤫" : note.pitch}
+        {isStart ? (isActive ? "→" : "") : isPause ? "🤫" : note.pitch}
       </span>
     </div>
   );
