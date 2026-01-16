@@ -881,7 +881,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "gray",
     color: "white",
     overflow: "hidden",
     position: "relative",
