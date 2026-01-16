@@ -767,7 +767,8 @@ function NoteCard({
   const isDarkColor = luminance < 0.5;
   const size = unitSize ?? DEFAULT_UNIT;
   // active border thickness (visible when active)
-  const activeBorder = Math.max(Math.round(size / 12), 6);
+  const activeBorder = Math.max(Math.round(size / 10), 6);
+  const inactiveBorder = Math.round(activeBorder / 3);
   // base content width/height for the note (without considering outer shell)
   const baseWidth = note.duration * (isLarge ? size * 1.5 : size);
   const baseHeight = isLarge ? Math.round(size * 3.75) : Math.round(size);
@@ -811,9 +812,13 @@ function NoteCard({
         width: `${outerWidth}px`,
         height: `${outerHeight}px`,
         // start cards never show a border; otherwise active cards get the blue border
-        borderStyle: isStart ? "none" : isActive ? "solid" : "none",
-        borderWidth: isStart ? "0px" : isActive ? `${activeBorder}px` : "0px",
-        borderColor: isStart ? undefined : isActive ? "#00d4ff" : undefined,
+        borderStyle: isStart ? "none" : isActive ? "solid" : "solid",
+        borderWidth: isStart
+          ? "0px"
+          : isActive
+          ? `${activeBorder}px`
+          : `${inactiveBorder}px`,
+        borderColor: isStart ? undefined : isActive ? "#00d4ff" : "white",
         color: isDarkColor ? "white" : "black",
         transform: isActive ? "scale(1)" : "scale(1)",
         zIndex: isActive ? 2 : 1,
