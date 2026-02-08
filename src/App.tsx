@@ -24,6 +24,11 @@ function parseSongString(song: string | undefined): Note[] {
     let pitch = token;
     let duration = 1;
 
+    // barline token: '|' marks a measure boundary
+    if (token === "|") {
+      return { pitch: "|", duration: 0 } as Note;
+    }
+
     if (token.includes("/")) {
       const parts = token.split("/");
       pitch = parts[0].trim();
@@ -137,10 +142,150 @@ export default function App() {
   const mainRef = useRef<HTMLDivElement | null>(null);
   const noteRefs = useRef<Array<HTMLDivElement | null>>([]);
 
+  // track available width for the static grid so we can compute preferred breaks
+  const [containerWidth, setContainerWidth] = useState<number>(1200);
+
   // ensure refs array resets when notes change
   useEffect(() => {
     noteRefs.current = [];
   }, [notes.length]);
+
+  // update container width on resize / mount
+  useEffect(() => {
+    function updateWidth() {
+      try {
+        const container = mainRef.current as HTMLDivElement | null;
+        if (!container) return setContainerWidth(1200);
+        // prefer the width of the inner static grid if present
+        const grid = container.querySelector(
+          "[data-static-grid]"
+        ) as HTMLDivElement | null;
+        const w = (grid || container).clientWidth || 1200;
+        setContainerWidth(Math.max(200, w));
+      } catch (e) {
+        setContainerWidth(1200);
+      }
+    }
+    updateWidth();
+    const ro = new ResizeObserver(updateWidth);
+    if (mainRef.current) ro.observe(mainRef.current);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      try {
+        ro.disconnect();
+      } catch (e) {}
+      window.removeEventListener("resize", updateWidth);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainRef.current, notes.length]);
+
+  // Compute rows for static mode, preferring barline breaks (pitch === '|')
+  const rows = useMemo(() => {
+    if (mode !== "static") return [[...Array(notes.length).keys()]];
+
+    // Build measures: arrays of note indices between barlines
+    const measures: number[][] = [];
+    let cur: number[] = [];
+    for (let i = 0; i < notes.length; i++) {
+      const n = notes[i];
+      if (String(n.pitch) === "|") {
+        measures.push(cur);
+        cur = [];
+      } else {
+        cur.push(i);
+      }
+    }
+    if (cur.length > 0) measures.push(cur);
+
+    // If the song contains any barlines, force the `start` token onto its own measure
+    const hasBarlines = notes.some((n) => String(n.pitch) === "|");
+    if (hasBarlines) {
+      const startIdx = notes.findIndex(
+        (n) => String(n.pitch).toLowerCase() === "start"
+      );
+      if (startIdx >= 0) {
+        // remove start from any existing measure it may be in
+        for (const m of measures) {
+          const p = m.indexOf(startIdx);
+          if (p !== -1) {
+            m.splice(p, 1);
+            break;
+          }
+        }
+        // insert a dedicated leading measure containing only the start token
+        measures.unshift([startIdx]);
+      }
+    }
+
+    // Compute an average outer width for notes using unitSize similar to NoteCard
+    const activeBorder = Math.max(Math.round(unitSize / 10), 6);
+    const gap = 15; // match styles.staticGrid.gap
+
+    const widths: number[] = notes.map((n) => {
+      const dur = n.duration > 0 ? n.duration : 0.0001;
+      const base = dur * unitSize;
+      return base + 2 * activeBorder;
+    });
+    const avgWidth = widths.length
+      ? widths.reduce((a, b) => a + b, 0) / widths.length
+      : unitSize + 2 * activeBorder;
+
+    const targetNotesPerRow = Math.max(
+      1,
+      Math.floor((containerWidth + gap) / (avgWidth + gap))
+    );
+
+    // Pack measures into rows without splitting measures when possible.
+    const outRows: number[][] = [];
+    let row: number[] = [];
+    let rowCount = 0;
+    for (const measure of measures) {
+      if (measure.length === 0) {
+        // empty measure: treat as a small separator, prefer to keep with current row
+        continue;
+      }
+
+      // if measure is larger than capacity, split it
+      if (measure.length > targetNotesPerRow) {
+        // flush current row first
+        if (rowCount > 0) {
+          outRows.push(row);
+          row = [];
+          rowCount = 0;
+        }
+        for (let s = 0; s < measure.length; s += targetNotesPerRow) {
+          outRows.push(measure.slice(s, s + targetNotesPerRow));
+        }
+        continue;
+      }
+
+      // if measure fits in current row, append
+      if (rowCount + measure.length <= targetNotesPerRow || rowCount === 0) {
+        row = row.concat(measure);
+        rowCount += measure.length;
+      } else {
+        // push current row and start new one with this measure
+        outRows.push(row);
+        row = [...measure];
+        rowCount = measure.length;
+      }
+    }
+    if (rowCount > 0) outRows.push(row);
+
+    // If there are no explicit barlines (single measure equals all notes), fallback to equal chunks
+    if (measures.length <= 1) {
+      const flat: number[] = measures.length === 1 ? measures[0] : [];
+      const fallback: number[][] = [];
+      for (let i = 0; i < flat.length; i += targetNotesPerRow) {
+        fallback.push(flat.slice(i, i + targetNotesPerRow));
+      }
+      return fallback.length ? fallback : [flat];
+    }
+
+    return outRows.length
+      ? outRows
+      : [Array.from({ length: notes.length }, (_, i) => i)];
+  }, [notes, unitSize, containerWidth, mode]);
 
   // Auto-scroll when active note is in the lower part of the visible area
   useEffect(() => {
@@ -597,19 +742,23 @@ export default function App() {
         {isTransitioning ? (
           <div style={styles.transitionBlank} />
         ) : mode === "static" ? (
-          <div style={styles.staticGrid}>
-            {notes.map((note, i) => (
-              <NoteCard
-                key={i}
-                note={note}
-                isActive={i === currentIndex}
-                onClick={() => setCurrentIndex(i)}
-                colorMap={COLOR_MAP}
-                unitSize={unitSize}
-                containerRef={(el: HTMLDivElement | null) => {
-                  noteRefs.current[i] = el;
-                }}
-              />
+          <div style={styles.staticGrid} data-static-grid>
+            {rows.map((row, ri) => (
+              <div key={ri} style={styles.row}>
+                {row.map((i) => (
+                  <NoteCard
+                    key={i}
+                    note={notes[i]}
+                    isActive={i === currentIndex}
+                    onClick={() => setCurrentIndex(i)}
+                    colorMap={COLOR_MAP}
+                    unitSize={unitSize}
+                    containerRef={(el: HTMLDivElement | null) => {
+                      noteRefs.current[i] = el;
+                    }}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         ) : (
@@ -933,10 +1082,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   staticGrid: {
     display: "flex",
-    flexWrap: "wrap",
+    flexDirection: "column",
     gap: "15px",
     justifyContent: "center",
     maxWidth: "1200px",
+  },
+  row: {
+    display: "flex",
+    gap: "15px",
+    justifyContent: "center",
+    marginBottom: "15px",
   },
   dynamicWrapper: {
     display: "flex",
