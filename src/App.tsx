@@ -199,22 +199,20 @@ export default function App() {
 
     // If the song contains any barlines, force the `start` token onto its own measure
     const hasBarlines = notes.some((n) => String(n.pitch) === "|");
-    if (hasBarlines) {
-      const startIdx = notes.findIndex(
-        (n) => String(n.pitch).toLowerCase() === "start"
-      );
-      if (startIdx >= 0) {
-        // remove start from any existing measure it may be in
-        for (const m of measures) {
-          const p = m.indexOf(startIdx);
-          if (p !== -1) {
-            m.splice(p, 1);
-            break;
-          }
+    const startIdx = notes.findIndex(
+      (n) => String(n.pitch).toLowerCase() === "start"
+    );
+    if (hasBarlines && startIdx >= 0) {
+      // remove start from any existing measure it may be in
+      for (const m of measures) {
+        const p = m.indexOf(startIdx);
+        if (p !== -1) {
+          m.splice(p, 1);
+          break;
         }
-        // insert a dedicated leading measure containing only the start token
-        measures.unshift([startIdx]);
       }
+      // insert a dedicated leading measure containing only the start token
+      measures.unshift([startIdx]);
     }
 
     // Compute an average outer width for notes using unitSize similar to NoteCard
@@ -242,6 +240,23 @@ export default function App() {
     for (const measure of measures) {
       if (measure.length === 0) {
         // empty measure: treat as a small separator, prefer to keep with current row
+        continue;
+      }
+
+      // If this measure is the `start` token and the song has barlines,
+      // force it to be its own row to satisfy the requirement.
+      if (
+        hasBarlines &&
+        typeof startIdx === "number" &&
+        startIdx >= 0 &&
+        measure.indexOf(startIdx) !== -1
+      ) {
+        if (rowCount > 0) {
+          outRows.push(row);
+          row = [];
+          rowCount = 0;
+        }
+        outRows.push([startIdx]);
         continue;
       }
 
