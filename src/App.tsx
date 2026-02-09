@@ -220,6 +220,11 @@ export default function App() {
     return out;
   }, [notes]);
 
+  // index of the `start` token if present
+  const startIndex = notes.findIndex(
+    (n) => String(n.pitch).toLowerCase() === "start",
+  );
+
   // Auto-scroll when active note is in the lower part of the visible area
   useEffect(() => {
     if (mode !== "static") return;
@@ -677,23 +682,36 @@ export default function App() {
           <div style={styles.transitionBlank} />
         ) : mode === "static" ? (
           <div style={styles.staticGrid} data-static-grid>
-            {measures.map((measure, mi) => (
-              <div key={mi} style={styles.measure}>
-                {measure.map((i) => (
-                  <NoteCard
-                    key={i}
-                    note={notes[i]}
-                    isActive={i === currentIndex}
-                    onClick={() => setCurrentIndex(i)}
-                    colorMap={COLOR_MAP}
-                    unitSize={unitSize}
-                    containerRef={(el: HTMLDivElement | null) => {
-                      noteRefs.current[i] = el;
-                    }}
-                  />
-                ))}
-              </div>
-            ))}
+            {measures.map((measure, mi) => {
+              const isStartMeasure =
+                measure.length === 1 &&
+                measure[0] === startIndex &&
+                notes.some((n) => String(n.pitch) === "|");
+              return (
+                <div
+                  key={mi}
+                  style={
+                    isStartMeasure
+                      ? { ...styles.measure, ...styles.measureStart }
+                      : styles.measure
+                  }
+                >
+                  {measure.map((i) => (
+                    <NoteCard
+                      key={i}
+                      note={notes[i]}
+                      isActive={i === currentIndex}
+                      onClick={() => setCurrentIndex(i)}
+                      colorMap={COLOR_MAP}
+                      unitSize={unitSize}
+                      containerRef={(el: HTMLDivElement | null) => {
+                        noteRefs.current[i] = el;
+                      }}
+                    />
+                  ))}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div style={styles.dynamicWrapper}>
@@ -1034,6 +1052,12 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: "15px",
     // ensure measure sizes to its content and will wrap as a whole
     flex: "0 0 auto",
+  },
+  // Special style for the leading `start` measure when the song contains barlines.
+  // We force it to take the full row so it's always alone on a line.
+  measureStart: {
+    flex: "0 0 100%",
+    justifyContent: "flex-start",
   },
   row: {
     display: "flex",
