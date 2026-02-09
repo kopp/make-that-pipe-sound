@@ -226,6 +226,33 @@ export default function App() {
     (n) => String(n.pitch).toLowerCase() === "start",
   );
 
+  // Helpers to find the next/previous note index skipping barline tokens ('|').
+  const findNextNonBar = useCallback(
+    (from: number) => {
+      if (notes.length === 0) return 0;
+      let i = from;
+      for (let k = 0; k < notes.length; k++) {
+        i = (i + 1) % notes.length;
+        if (String(notes[i].pitch) !== "|") return i;
+      }
+      return from;
+    },
+    [notes],
+  );
+
+  const findPrevNonBar = useCallback(
+    (from: number) => {
+      if (notes.length === 0) return 0;
+      let i = from;
+      for (let k = 0; k < notes.length; k++) {
+        i = (i - 1 + notes.length) % notes.length;
+        if (String(notes[i].pitch) !== "|") return i;
+      }
+      return from;
+    },
+    [notes],
+  );
+
   // Auto-scroll when active note is in the lower part of the visible area
   useEffect(() => {
     if (mode !== "static") return;
@@ -259,37 +286,32 @@ export default function App() {
   // If in `dynamic` mode, use a brief blank transition; in `static` mode advance immediately.
   const nextNote = useCallback(() => {
     if (mode !== "dynamic") {
-      setCurrentIndex((prev) => (prev < notes.length - 1 ? prev + 1 : 0));
+      setCurrentIndex((prev) => findNextNonBar(prev));
       return;
     }
     if (isTransitioning) return;
     setIsTransitioning(true);
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev < notes.length - 1 ? prev + 1 : 0));
+      setCurrentIndex((prev) => findNextNonBar(prev));
       setIsTransitioning(false);
     }, TRANSITION_MS);
-  }, [notes.length, isTransitioning, mode]);
+  }, [findNextNonBar, isTransitioning, mode]);
+  // depend on the helper callbacks instead of notes.length
 
   // Go to previous note (wrap to end if at start).
   // If in `dynamic` mode, use a brief blank transition; otherwise immediate.
   const prevNote = useCallback(() => {
     if (mode !== "dynamic") {
-      setCurrentIndex((prev) => {
-        if (notes.length === 0) return 0;
-        return prev > 0 ? prev - 1 : notes.length - 1;
-      });
+      setCurrentIndex((prev) => findPrevNonBar(prev));
       return;
     }
     if (isTransitioning) return;
     setIsTransitioning(true);
     setTimeout(() => {
-      setCurrentIndex((prev) => {
-        if (notes.length === 0) return 0;
-        return prev > 0 ? prev - 1 : notes.length - 1;
-      });
+      setCurrentIndex((prev) => findPrevNonBar(prev));
       setIsTransitioning(false);
     }, TRANSITION_MS);
-  }, [notes.length, isTransitioning, mode]);
+  }, [findPrevNonBar, isTransitioning, mode]);
 
   // Reset to first note
   const resetNotes = useCallback(() => {
