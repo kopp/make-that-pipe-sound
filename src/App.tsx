@@ -1036,9 +1036,9 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: "15px",
+    gap: "0px",
     justifyContent: "flex-start",
-    maxWidth: "1200px",
+    // maxWidth: "1200px",
   },
   // A measure is a non-breaking flex item; its children (notes) are laid out
   // horizontally and will not wrap within the measure. When a measure doesn't
