@@ -96,7 +96,7 @@ export default function App() {
       return JSON.parse(overrideRaw);
     } catch (e) {
       alert(
-        "The stored JSON data is invalid (cannot get parsed). Using default data."
+        "The stored JSON data is invalid (cannot get parsed). Using default data.",
       );
       return DATA as any;
     }
@@ -111,7 +111,7 @@ export default function App() {
   const [songKey, setSongKey] = useState<string>(Object.keys(SONG_DATA)[0]);
   const [mode, setMode] = useState<Mode>("static");
   const [upcomingCount, setUpcomingCount] = useState<number>(
-    INITIAL_UPCOMING_COUNT
+    INITIAL_UPCOMING_COUNT,
   );
   // following notes in the dynamic mode ignore the duration and are all same size
   const [smallFollowing, setSmallFollowing] = useState<boolean>(true);
@@ -158,7 +158,7 @@ export default function App() {
         if (!container) return setContainerWidth(1200);
         // prefer the width of the inner static grid if present
         const grid = container.querySelector(
-          "[data-static-grid]"
+          "[data-static-grid]",
         ) as HTMLDivElement | null;
         const w = (grid || container).clientWidth || 1200;
         setContainerWidth(Math.max(200, w));
@@ -200,7 +200,7 @@ export default function App() {
     // If the song contains any barlines, force the `start` token onto its own measure
     const hasBarlines = notes.some((n) => String(n.pitch) === "|");
     const startIdx = notes.findIndex(
-      (n) => String(n.pitch).toLowerCase() === "start"
+      (n) => String(n.pitch).toLowerCase() === "start",
     );
     if (hasBarlines && startIdx >= 0) {
       // remove start from any existing measure it may be in
@@ -230,7 +230,7 @@ export default function App() {
 
     const targetNotesPerRow = Math.max(
       1,
-      Math.floor((containerWidth + gap) / (avgWidth + gap))
+      Math.floor((containerWidth + gap) / (avgWidth + gap)),
     );
 
     // Pack measures into rows without splitting measures when possible.
@@ -437,8 +437,9 @@ export default function App() {
     if (!playAudio) return;
     try {
       if (!audioCtxRef.current)
-        audioCtxRef.current = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
+        audioCtxRef.current = new (
+          window.AudioContext || (window as any).webkitAudioContext
+        )();
       const ctx = audioCtxRef.current as AudioContext;
       // some browsers require resume on user gesture
       ctx.resume().catch(() => {});
@@ -611,7 +612,7 @@ export default function App() {
                         onChange={(e) => {
                           const v = Number(e.target.value);
                           setUpcomingCount(
-                            Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0
+                            Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0,
                           );
                         }}
                         style={styles.numberInput}
@@ -704,7 +705,7 @@ export default function App() {
                     // save override
                     localStorage.setItem(
                       LOCAL_STORAGE_KEY,
-                      JSON.stringify(parsed)
+                      JSON.stringify(parsed),
                     );
                     setOverrideRaw(JSON.stringify(parsed));
                     // set song key to first song if needed
@@ -933,13 +934,12 @@ function NoteCard({
   // active border thickness (visible when active)
   const activeBorder = Math.max(Math.round(size / 10), 6);
   const inactiveBorder = Math.round(activeBorder / 3);
-  // base content width/height for the note (without considering outer shell)
-  const baseWidth = note.duration * (isLarge ? size * 1.5 : size);
-  const baseHeight = isLarge ? Math.round(size * 3.75) : Math.round(size);
-  // outer footprint width/height so active (with thicker border) and
-  // inactive (with thinner border) occupy the same overall box size.
-  const outerWidth = baseWidth + 2 * activeBorder;
-  const outerHeight = baseHeight + 2 * activeBorder;
+  // outer width/height for the note, including border and margin
+  // active and inactive (with thinner border) notes occupy the same overall box size.
+  const outerWidth = note.duration * (isLarge ? size * 1.5 : size);
+  const outerHeight = isLarge ? Math.round(size * 3.75) : Math.round(size);
+  //
+  const marginRightPx = 10;
   const bgStyle: React.CSSProperties = {};
   if (!isMulti) {
     bgStyle.backgroundColor = parsed[0] || "#555";
@@ -973,15 +973,16 @@ function NoteCard({
         // Ensure that the NoteCard takes the same space in both active/inactive
         // states, otherwise the layout shifts while playing.
         boxSizing: "border-box",
-        width: `${outerWidth}px`,
+        width: `${outerWidth - marginRightPx}px`,
         height: `${outerHeight}px`,
         // start cards never show a border; otherwise active cards get the blue border
         borderStyle: isStart ? "none" : isActive ? "solid" : "solid",
         borderWidth: isStart
           ? "0px"
           : isActive
-          ? `${activeBorder}px`
-          : `${inactiveBorder}px`,
+            ? `${activeBorder}px`
+            : `${inactiveBorder}px`,
+        marginRight: `${marginRightPx}px`,
         borderColor: isStart ? undefined : isActive ? "#00d4ff" : "white",
         color: isDarkColor ? "white" : "black",
         transform: isActive ? "scale(1)" : "scale(1)",
@@ -1003,33 +1004,33 @@ function NoteCard({
                 zIndex: 3,
               }
             : isPause
-            ? {
-                fontSize: isLarge ? "2rem" : "1.25rem",
-                padding: "0",
-                background: "transparent",
-                color: "white",
-                borderRadius: "0",
-                position: "relative",
-                zIndex: 3,
-              }
-            : isMulti
-            ? {
-                backgroundColor: "#000",
-                color: "white",
-                padding: "6px 10px",
-                borderRadius: "8px",
-                fontSize: isLarge ? "1.5rem" : "1rem",
-                fontWeight: "bold",
-                // keep label above borders
-                position: "relative",
-                zIndex: 3,
-              }
-            : {
-                fontSize: isLarge ? "1.5rem" : "1rem",
-                fontWeight: "bold",
-                position: "relative",
-                zIndex: 3,
-              }
+              ? {
+                  fontSize: isLarge ? "2rem" : "1.25rem",
+                  padding: "0",
+                  background: "transparent",
+                  color: "white",
+                  borderRadius: "0",
+                  position: "relative",
+                  zIndex: 3,
+                }
+              : isMulti
+                ? {
+                    backgroundColor: "#000",
+                    color: "white",
+                    padding: "6px 10px",
+                    borderRadius: "8px",
+                    fontSize: isLarge ? "1.5rem" : "1rem",
+                    fontWeight: "bold",
+                    // keep label above borders
+                    position: "relative",
+                    zIndex: 3,
+                  }
+                : {
+                    fontSize: isLarge ? "1.5rem" : "1rem",
+                    fontWeight: "bold",
+                    position: "relative",
+                    zIndex: 3,
+                  }
         }
       >
         {isStart ? (isActive ? "→" : "") : isPause ? "🤫" : note.pitch}
@@ -1104,7 +1105,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   row: {
     display: "flex",
-    gap: "15px",
+    gap: "0px", // no gaps, we use margin on NoteCard to separate notes
     justifyContent: "center",
     marginBottom: "15px",
   },
