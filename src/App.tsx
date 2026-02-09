@@ -213,8 +213,9 @@ export default function App() {
       out.unshift([startIdx]);
     }
 
-    // If there are no explicit barlines, treat each note as its own measure.
-    if (out.length === 0) {
+    // If the song contains no explicit barlines, return each note as its own measure
+    // so notes can reflow individually instead of being trapped in one large measure.
+    if (!hasBarlines) {
       return notes.map((_, i) => [i]);
     }
     return out;
