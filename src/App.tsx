@@ -179,23 +179,23 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainRef.current, notes.length]);
 
-  // Compute rows for static mode, preferring barline breaks (pitch === '|')
-  const rows = useMemo(() => {
-    if (mode !== "static") return [[...Array(notes.length).keys()]];
-
+  // Compute measures for static mode (group notes between '|' barlines).
+  // Each measure will be rendered as a single non-breaking flex item so
+  // the browser will only wrap between measures automatically.
+  const measures = useMemo(() => {
     // Build measures: arrays of note indices between barlines
-    const measures: number[][] = [];
+    const out: number[][] = [];
     let cur: number[] = [];
     for (let i = 0; i < notes.length; i++) {
       const n = notes[i];
       if (String(n.pitch) === "|") {
-        measures.push(cur);
+        out.push(cur);
         cur = [];
       } else {
         cur.push(i);
       }
     }
-    if (cur.length > 0) measures.push(cur);
+    if (cur.length > 0) out.push(cur);
 
     // If the song contains any barlines, force the `start` token onto its own measure
     const hasBarlines = notes.some((n) => String(n.pitch) === "|");
@@ -203,104 +203,22 @@ export default function App() {
       (n) => String(n.pitch).toLowerCase() === "start",
     );
     if (hasBarlines && startIdx >= 0) {
-      // remove start from any existing measure it may be in
-      for (const m of measures) {
+      for (const m of out) {
         const p = m.indexOf(startIdx);
         if (p !== -1) {
           m.splice(p, 1);
           break;
         }
       }
-      // insert a dedicated leading measure containing only the start token
-      measures.unshift([startIdx]);
+      out.unshift([startIdx]);
     }
 
-    // Compute an average outer width for notes using unitSize similar to NoteCard
-    const activeBorder = Math.max(Math.round(unitSize / 10), 6);
-    const gap = 15; // match styles.staticGrid.gap
-
-    const widths: number[] = notes.map((n) => {
-      const dur = n.duration > 0 ? n.duration : 0.0001;
-      const base = dur * unitSize;
-      return base + 2 * activeBorder;
-    });
-    const avgWidth = widths.length
-      ? widths.reduce((a, b) => a + b, 0) / widths.length
-      : unitSize + 2 * activeBorder;
-
-    const targetNotesPerRow = Math.max(
-      1,
-      Math.floor((containerWidth + gap) / (avgWidth + gap)),
-    );
-
-    // Pack measures into rows without splitting measures when possible.
-    const outRows: number[][] = [];
-    let row: number[] = [];
-    let rowCount = 0;
-    for (const measure of measures) {
-      if (measure.length === 0) {
-        // empty measure: treat as a small separator, prefer to keep with current row
-        continue;
-      }
-
-      // If this measure is the `start` token and the song has barlines,
-      // force it to be its own row to satisfy the requirement.
-      if (
-        hasBarlines &&
-        typeof startIdx === "number" &&
-        startIdx >= 0 &&
-        measure.indexOf(startIdx) !== -1
-      ) {
-        if (rowCount > 0) {
-          outRows.push(row);
-          row = [];
-          rowCount = 0;
-        }
-        outRows.push([startIdx]);
-        continue;
-      }
-
-      // if measure is larger than capacity, split it
-      if (measure.length > targetNotesPerRow) {
-        // flush current row first
-        if (rowCount > 0) {
-          outRows.push(row);
-          row = [];
-          rowCount = 0;
-        }
-        for (let s = 0; s < measure.length; s += targetNotesPerRow) {
-          outRows.push(measure.slice(s, s + targetNotesPerRow));
-        }
-        continue;
-      }
-
-      // if measure fits in current row, append
-      if (rowCount + measure.length <= targetNotesPerRow || rowCount === 0) {
-        row = row.concat(measure);
-        rowCount += measure.length;
-      } else {
-        // push current row and start new one with this measure
-        outRows.push(row);
-        row = [...measure];
-        rowCount = measure.length;
-      }
+    // If there are no explicit barlines, treat each note as its own measure.
+    if (out.length === 0) {
+      return notes.map((_, i) => [i]);
     }
-    if (rowCount > 0) outRows.push(row);
-
-    // If there are no explicit barlines (single measure equals all notes), fallback to equal chunks
-    if (measures.length <= 1) {
-      const flat: number[] = measures.length === 1 ? measures[0] : [];
-      const fallback: number[][] = [];
-      for (let i = 0; i < flat.length; i += targetNotesPerRow) {
-        fallback.push(flat.slice(i, i + targetNotesPerRow));
-      }
-      return fallback.length ? fallback : [flat];
-    }
-
-    return outRows.length
-      ? outRows
-      : [Array.from({ length: notes.length }, (_, i) => i)];
-  }, [notes, unitSize, containerWidth, mode]);
+    return out;
+  }, [notes]);
 
   // Auto-scroll when active note is in the lower part of the visible area
   useEffect(() => {
@@ -759,9 +677,9 @@ export default function App() {
           <div style={styles.transitionBlank} />
         ) : mode === "static" ? (
           <div style={styles.staticGrid} data-static-grid>
-            {rows.map((row, ri) => (
-              <div key={ri} style={styles.row}>
-                {row.map((i) => (
+            {measures.map((measure, mi) => (
+              <div key={mi} style={styles.measure}>
+                {measure.map((i) => (
                   <NoteCard
                     key={i}
                     note={notes[i]}
@@ -1098,10 +1016,24 @@ const styles: Record<string, React.CSSProperties> = {
   },
   staticGrid: {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: "15px",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     maxWidth: "1200px",
+  },
+  // A measure is a non-breaking flex item; its children (notes) are laid out
+  // horizontally and will not wrap within the measure. When a measure doesn't
+  // fit, the browser will wrap the entire measure to the next line.
+  measure: {
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    gap: "0px",
+    alignItems: "center",
+    marginBottom: "15px",
+    // ensure measure sizes to its content and will wrap as a whole
+    flex: "0 0 auto",
   },
   row: {
     display: "flex",
