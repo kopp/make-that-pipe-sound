@@ -141,43 +141,10 @@ export default function App() {
   // refs for scrolling behavior: main scroll container and per-note element refs
   const mainRef = useRef<HTMLDivElement | null>(null);
   const noteRefs = useRef<Array<HTMLDivElement | null>>([]);
-
-  // track available width for the static grid so we can compute preferred breaks
-  const [containerWidth, setContainerWidth] = useState<number>(1200);
-
   // ensure refs array resets when notes change
   useEffect(() => {
     noteRefs.current = [];
   }, [notes.length]);
-
-  // update container width on resize / mount
-  useEffect(() => {
-    function updateWidth() {
-      try {
-        const container = mainRef.current as HTMLDivElement | null;
-        if (!container) return setContainerWidth(1200);
-        // prefer the width of the inner static grid if present
-        const grid = container.querySelector(
-          "[data-static-grid]",
-        ) as HTMLDivElement | null;
-        const w = (grid || container).clientWidth || 1200;
-        setContainerWidth(Math.max(200, w));
-      } catch (e) {
-        setContainerWidth(1200);
-      }
-    }
-    updateWidth();
-    const ro = new ResizeObserver(updateWidth);
-    if (mainRef.current) ro.observe(mainRef.current);
-    window.addEventListener("resize", updateWidth);
-    return () => {
-      try {
-        ro.disconnect();
-      } catch (e) {}
-      window.removeEventListener("resize", updateWidth);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mainRef.current, notes.length]);
 
   // Compute measures for static mode (group notes between '|' barlines).
   // Each measure will be rendered as a single non-breaking flex item so
